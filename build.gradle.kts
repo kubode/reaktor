@@ -16,7 +16,7 @@ allprojects {
         mavenCentral()
     }
     group = "com.github.kubode.reaktor"
-    version = "0.0.0"
+    version = "0.1.0"
 }
 
 tasks.register("clean", Delete::class) {

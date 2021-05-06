@@ -3,7 +3,7 @@ package com.github.kubode.reaktor
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-interface Reactor<ActionT, StateT, EventT> {
+interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
     val currentState: StateT
     val state: Flow<StateT>
     val event: Flow<EventT>
@@ -12,50 +12,31 @@ interface Reactor<ActionT, StateT, EventT> {
     fun destroy()
 }
 
-class A
-class S
-class E
-
-fun main() {
-    val reactor = object : Reactor<A, S, E> {
-        override val currentState: S
-            get() = TODO("Not yet implemented")
-        override val state: Flow<S>
-            get() = TODO("Not yet implemented")
-        override val event: Flow<E>
-            get() = TODO("Not yet implemented")
-        override val error: Flow<Throwable>
-            get() = TODO("Not yet implemented")
-
-        override fun send(action: A): Boolean {
-            TODO("Not yet implemented")
-        }
-
-        override fun destroy() {
-            TODO("Not yet implemented")
-        }
-    }
-
-    GlobalScope.launch {
-        reactor.error.collect { error ->
+class FlowWrapper<T : Any>(private val flow: Flow<T>) : Flow<T> by flow {
+    fun subscribeInMainScope(block: (T) -> Unit): Job {
+        return MainScope().launch {
+            collect {
+                block(it)
+            }
         }
     }
 }
 
-class FlowWrapper<T>(private val flow: Flow<T>) : Flow<T> by flow
-
 // Exposed to Native
-abstract class BaseReactor<ActionT : Any, StateT : Any, EventT : Any> :
+abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> :
     Reactor<ActionT, StateT, EventT> {
+    // Overrides generics for Native interoperability.
+    abstract override val currentState: StateT
     abstract override val state: FlowWrapper<StateT>
     abstract override val event: FlowWrapper<EventT>
     abstract override val error: FlowWrapper<Throwable>
+    abstract override fun send(action: ActionT): Boolean
 }
 
 // Internal
-abstract class AbstractReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT : Any>(
+abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT : Any>(
     initialState: StateT,
-) : BaseReactor<ActionT, StateT, EventT>() {
+) : AbstractReactor<ActionT, StateT, EventT>() {
 
     private val _actions: MutableSharedFlow<ActionT> = MutableSharedFlow()
 
@@ -79,12 +60,19 @@ abstract class AbstractReactor<ActionT : Any, MutationT : Any, StateT : Any, Eve
         CoroutineScope(job + Dispatchers.Main + exceptionHandler)
 
     init {
+        println("Init ${this::class.simpleName}")
         reactorScope.launch {
+            println("Init ${this::class.simpleName} in launch")
             @Suppress("EXPERIMENTAL_API_USAGE") // for flatMapMerge
             transformAction(_actions)
+                .onEach { println("Action: $it") }
                 .flatMapMerge { mutate(it) }
                 .let { transformMutation(it) }
-                .collect { _state.value = reduce(currentState, it) }
+                .onEach { println("Mutate: $it") }
+                .collect {
+                    _state.value = reduce(currentState, it)
+                    println("New state: ${_state.value}")
+                }
         }
     }
 
@@ -99,10 +87,11 @@ abstract class AbstractReactor<ActionT : Any, MutationT : Any, StateT : Any, Eve
     open fun onDestroy() {}
 
     protected abstract fun mutate(action: ActionT): Flow<MutationT>
-    protected abstract fun reduce(currentState: StateT, mutation: MutationT): StateT
+    protected abstract fun reduce(state: StateT, mutation: MutationT): StateT
 
     final override fun send(action: ActionT): Boolean {
-        return _actions.tryEmit(action)
+        println("Sending: $action")
+        return _actions.tryEmit(action).also { println("Sending result: $it") }
     }
 
     protected open fun transformAction(action: Flow<ActionT>): Flow<ActionT> {

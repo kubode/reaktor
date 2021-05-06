@@ -1,13 +1,13 @@
 package com.example.playgroundreactor
 
 import com.example.playgroundreactor.MyReactor.*
-import com.github.kubode.reaktor.AbstractReactor
+import com.github.kubode.reaktor.BaseReactor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlin.random.Random
 
-class MyReactor : AbstractReactor<Action, Mutation, State, Event>(State()) {
+class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
     sealed class Action {
         data class UpdateText(val text: String) : Action()
         object Submit : Action()
@@ -29,6 +29,7 @@ class MyReactor : AbstractReactor<Action, Mutation, State, Event>(State()) {
     }
 
     override fun mutate(action: Action): Flow<Mutation> = flow {
+        println("Received action: $action")
         when (action) {
             is Action.UpdateText -> {
                 emit(Mutation.SetText(action.text))
@@ -52,17 +53,24 @@ class MyReactor : AbstractReactor<Action, Mutation, State, Event>(State()) {
         }
     }
 
-    override fun reduce(currentState: State, mutation: Mutation): State {
+    override fun reduce(state: State, mutation: Mutation): State {
         return when (mutation) {
-            is Mutation.SetText -> currentState.copy(text = mutation.text)
-            is Mutation.SetSubmitting -> currentState.copy(isSubmitting = mutation.isSubmitting)
+            is Mutation.SetText -> state.copy(
+                text = mutation.text
+            )
+            is Mutation.SetSubmitting -> state.copy(
+                isSubmitting = mutation.isSubmitting
+            )
         }
     }
 }
 
 private suspend fun doSubmit() {
+    println("Submitting")
     delay(1000)
     if (Random.Default.nextBoolean()) {
+        println("Error")
         throw RuntimeException("Error occurred during submit.")
     }
+    println("Succeeded")
 }
