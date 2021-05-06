@@ -1,7 +1,6 @@
 buildscript {
     repositories {
         gradlePluginPortal()
-        jcenter()
         google()
         mavenCentral()
     }
@@ -14,7 +13,6 @@ buildscript {
 allprojects {
     repositories {
         google()
-//        jcenter()
         mavenCentral()
     }
     group = "com.github.kubode.reaktor"
