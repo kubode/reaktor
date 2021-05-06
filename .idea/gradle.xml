@@ -13,6 +13,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/androidApp" />
+            <option value="$PROJECT_DIR$/reaktor" />
             <option value="$PROJECT_DIR$/shared" />
           </set>
         </option>
