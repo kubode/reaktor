@@ -2,7 +2,6 @@ package com.example.playgroundreactor.android
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import com.example.playgroundreactor.Greeting
 import android.widget.TextView
 
 fun greet(): String {
