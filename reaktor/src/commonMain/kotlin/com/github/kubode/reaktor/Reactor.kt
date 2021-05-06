@@ -3,12 +3,14 @@ package com.github.kubode.reaktor
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
+expect fun log(message: String)
+
 interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
     val currentState: StateT
     val state: Flow<StateT>
     val event: Flow<EventT>
     val error: Flow<Throwable>
-    fun send(action: ActionT): Boolean
+    fun send(action: ActionT)
     fun destroy()
 }
 
@@ -30,7 +32,7 @@ abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> :
     abstract override val state: FlowWrapper<StateT>
     abstract override val event: FlowWrapper<EventT>
     abstract override val error: FlowWrapper<Throwable>
-    abstract override fun send(action: ActionT): Boolean
+    abstract override fun send(action: ActionT)
 }
 
 // Internal
@@ -56,27 +58,31 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         error(throwable)
     }
 
-    internal val reactorScope: CoroutineScope =
+    private val reactorScope: CoroutineScope =
         CoroutineScope(job + Dispatchers.Main + exceptionHandler)
 
+    private val tag: String = this::class.simpleName.orEmpty()
+
     init {
-        println("Init ${this::class.simpleName}")
+        log("$tag init")
         reactorScope.launch {
-            println("Init ${this::class.simpleName} in launch")
+            _state.subscriptionCount.collect { log("$tag state subscribers: $it") }
+        }
+        reactorScope.launch {
             @Suppress("EXPERIMENTAL_API_USAGE") // for flatMapMerge
             transformAction(_actions)
-                .onEach { println("Action: $it") }
+                .onEach { log("$tag Action: $it") }
                 .flatMapMerge { mutate(it) }
                 .let { transformMutation(it) }
-                .onEach { println("Mutate: $it") }
+                .onEach { log("$tag Mutation: $it") }
                 .collect {
-                    _state.value = reduce(currentState, it)
-                    println("New state: ${_state.value}")
+                    _state.value = reduce(currentState, it).also { log("$tag Reduced: $it") }
                 }
         }
     }
 
     final override fun destroy() {
+        log("$tag destroy")
         job.cancel()
         onDestroy()
     }
@@ -89,9 +95,10 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     protected abstract fun mutate(action: ActionT): Flow<MutationT>
     protected abstract fun reduce(state: StateT, mutation: MutationT): StateT
 
-    final override fun send(action: ActionT): Boolean {
-        println("Sending: $action")
-        return _actions.tryEmit(action).also { println("Sending result: $it") }
+    final override fun send(action: ActionT) {
+        reactorScope.launch {
+            _actions.emit(action)
+        }
     }
 
     protected open fun transformAction(action: Flow<ActionT>): Flow<ActionT> {

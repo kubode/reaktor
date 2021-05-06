@@ -1,6 +1,7 @@
 import Foundation
 import shared
 import Combine
+import SwiftUI
 
 protocol Reactor: ObservableObject {
     associatedtype Action
@@ -12,6 +13,51 @@ protocol Reactor: ObservableObject {
     var event: AnyPublisher<Event, Never> { get }
     var error: AnyPublisher<KotlinThrowable, Never> { get }
     func send(action: Action)
+}
+
+@propertyWrapper
+struct ReactorState<SelfType, ReactorType: Reactor>: DynamicProperty {
+
+    init(_ reactorKeyPath: KeyPath<SelfType, ReactorType>) {
+    }
+
+    @EnvironmentObject
+    private var reactor: ReactorType
+    
+    var wrappedValue: ReactorType.State {
+        reactor.currentState
+    }
+    
+    var projectedValue: Binding<Value> {
+        get { target.wrappedValue.mutate(binding: keyPath, action) }
+    }
+}
+
+@propertyWrapper
+struct ActionBinding<SelfType, ReactorType: Reactor, Value>: DynamicProperty {
+    
+    private let valueKeyPath: KeyPath<ReactorType.State, Value>
+    private let action: (Value) -> ReactorType.Action
+    
+    init(_ reactorKeyPath: KeyPath<SelfType, ReactorType>, valueKeyPath: KeyPath<ReactorType.State, Value>, action: @escaping (Value) -> ReactorType.Action) {
+        self.valueKeyPath = valueKeyPath
+        self.action = action
+    }
+    
+    @EnvironmentObject
+    private var reactor: ReactorType
+    
+    var wrappedValue: Value {
+        get { projectedValue.wrappedValue }
+        nonmutating set { projectedValue.wrappedValue = newValue }
+    }
+    
+    var projectedValue: Binding<Value> {
+        Binding(
+            get: { reactor.currentState[keyPath: valueKeyPath] },
+            set: { reactor.send(action: action($0)) }
+        )
+    }
 }
 
 final class AnyReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : Reactor {
@@ -43,7 +89,7 @@ final class AnyReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : 
     }
     
     func send(action: Action) {
-        _ = reactor.send(action: action)
+        reactor.send(action: action)
     }
 }
 
@@ -56,6 +102,7 @@ struct FlowPublisher<Output, Failure>: Publisher where Output: AnyObject, Failur
     }
 
     func receive<S>(subscriber: S) where S : Subscriber, Self.Failure == S.Failure, Self.Output == S.Input {
+        NSLog("FlowPublisher receive")
         subscriber.receive(subscription: Subscription(flow: flow, target: subscriber))
     }
 }
@@ -67,6 +114,7 @@ private extension FlowPublisher {
         private let job: Kotlinx_coroutines_coreJob
         
         init(flow: ReaktorFlowWrapper<Output>, target: Target) {
+            NSLog("Subscription init")
             job = flow.subscribeInMainScope {
                 NSLog("\($0)")
                 _ = target.receive($0)

@@ -3,14 +3,14 @@ import shared
 
 struct ContentView: View {
     
-    @EnvironmentObject var reactor: AnyReactor<MyReactor.Action, MyReactor.State, MyReactor.Event>
+    @EnvironmentObject
+    var reactor: AnyReactor<MyReactor.Action, MyReactor.State, MyReactor.Event>
 
-    @State var state: MyReactor.State = MyReactor.State(text: "", isSubmitting: false)
-    @State var text: String = "" {
-        didSet {
-            NSLog(text)
-        }
-    }
+    @ReactorState(\Self.reactor)
+    var state: MyReactor.State
+
+    @ActionBinding(\Self.reactor, valueKeyPath: \.text, action: { MyReactor.ActionUpdateText(text: $0) })
+    var text: String
 
     var body: some View {
         VStack {
@@ -18,7 +18,10 @@ struct ContentView: View {
                 .font(.title)
             TextField(
                 "Input text",
-                text: $text
+                text: $text,
+                onEditingChanged: { isEditing in
+                    reactor.send(action: MyReactor.ActionUpdateText(text: text))
+                }
             )
             Button(
                 action: {
@@ -32,10 +35,6 @@ struct ContentView: View {
             if state.isSubmitting {
                 ProgressView()
             }
-        }.onReceive(reactor.state) {
-            NSLog("State: \($0)")
-            self.state = $0
-            self.text = $0.text
         }.onReceive(reactor.error) {
             NSLog("Error: \($0)")
         }

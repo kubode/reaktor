@@ -29,7 +29,6 @@ class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
     }
 
     override fun mutate(action: Action): Flow<Mutation> = flow {
-        println("Received action: $action")
         when (action) {
             is Action.UpdateText -> {
                 emit(Mutation.SetText(action.text))
@@ -42,7 +41,7 @@ class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
                 try {
                     doSubmit()
                     publish(Event.SubmitSucceeded)
-                } catch (e: IllegalArgumentException) {
+                } catch (e: SubmitException) {
                     error(e)
                     // or
                     publish(Event.Error(e))
@@ -65,12 +64,11 @@ class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
     }
 }
 
+private class SubmitException : Exception("Error occurred during submit.")
+
 private suspend fun doSubmit() {
-    println("Submitting")
     delay(1000)
     if (Random.Default.nextBoolean()) {
-        println("Error")
-        throw RuntimeException("Error occurred during submit.")
+        throw SubmitException()
     }
-    println("Succeeded")
 }
