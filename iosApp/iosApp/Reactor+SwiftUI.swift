@@ -45,30 +45,3 @@ final class AnySwiftUIReactor<Action: AnyObject, State: AnyObject, Event: AnyObj
         reactor.send(action: action)
     }
 }
-
-@propertyWrapper
-struct ActionBinding<SelfType, ReactorType: SwiftUIReactor, Value>: DynamicProperty {
-
-    private let valueKeyPath: KeyPath<ReactorType.State, Value>
-    private let action: (Value) -> ReactorType.Action
-
-    init(_ reactorKeyPath: KeyPath<SelfType, ReactorType>, valueKeyPath: KeyPath<ReactorType.State, Value>, action: @escaping (Value) -> ReactorType.Action) {
-        self.valueKeyPath = valueKeyPath
-        self.action = action
-    }
-
-    @EnvironmentObject
-    private var reactor: ReactorType
-
-    var wrappedValue: Value {
-        get { projectedValue.wrappedValue }
-        nonmutating set { projectedValue.wrappedValue = newValue }
-    }
-
-    var projectedValue: Binding<Value> {
-        Binding(
-            get: { reactor.state[keyPath: valueKeyPath] },
-            set: { reactor.send(action($0)) }
-        )
-    }
-}
