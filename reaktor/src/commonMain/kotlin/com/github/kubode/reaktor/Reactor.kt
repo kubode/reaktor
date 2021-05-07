@@ -3,8 +3,6 @@ package com.github.kubode.reaktor
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
-expect fun log(message: String)
-
 interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
     val currentState: StateT
     val state: Flow<StateT>
@@ -17,6 +15,7 @@ interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
 // Exposed to Native
 abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> :
     Reactor<ActionT, StateT, EventT> {
+
     // Overrides generics for Native interoperability.
     abstract override val currentState: StateT
     abstract override fun send(action: ActionT)
@@ -51,31 +50,22 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         error(throwable)
     }
 
-    private val reactorScope: CoroutineScope =
+    protected val reactorScope: CoroutineScope =
         CoroutineScope(job + Dispatchers.Main + exceptionHandler)
 
-    private val tag: String = this::class.simpleName.orEmpty()
-
     init {
-        log("$tag init")
-        reactorScope.launch {
-            _state.subscriptionCount.collect { log("$tag state subscribers: $it") }
-        }
         reactorScope.launch {
             @Suppress("EXPERIMENTAL_API_USAGE") // for flatMapMerge
             transformAction(_actions)
-                .onEach { log("$tag Action: $it") }
                 .flatMapMerge { mutate(it) }
                 .let { transformMutation(it) }
-                .onEach { log("$tag Mutation: $it") }
                 .collect {
-                    _state.value = reduce(currentState, it).also { log("$tag Reduced: $it") }
+                    _state.value = reduce(currentState, it)
                 }
         }
     }
 
     final override fun destroy() {
-        log("$tag destroy")
         job.cancel()
         onDestroy()
     }
@@ -83,7 +73,7 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     /**
      * Subclasses can override this to do something at [destroy] time.
      */
-    open fun onDestroy() {}
+    protected open fun onDestroy() {}
 
     protected abstract fun mutate(action: ActionT): Flow<MutationT>
     protected abstract fun reduce(state: StateT, mutation: MutationT): StateT
@@ -103,14 +93,12 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     }
 
     protected fun publish(event: EventT) {
-        log("Publish: $event")
         reactorScope.launch {
             _event.emit(event)
         }
     }
 
     protected fun error(error: Throwable) {
-        log("Error: $error")
         reactorScope.launch {
             _error.emit(error)
         }
