@@ -2,7 +2,6 @@ package com.example.playgroundreactor
 
 import com.example.playgroundreactor.MyReactor.*
 import com.github.kubode.reaktor.BaseReactor
-import com.github.kubode.reaktor.log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -69,7 +68,6 @@ private class SubmitException : Exception("Error occurred during submit.")
 private suspend fun doSubmit() {
     delay(1000)
     if (Random.Default.nextBoolean()) {
-        log("doSubmit throws")
         throw SubmitException()
     }
 }
