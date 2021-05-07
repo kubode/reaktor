@@ -6,7 +6,7 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(AnyReactor(reactor: MyReactor()))
+                .environmentObject(AnySwiftUIReactor(reactor: MyReactor()))
         }
     }
 }

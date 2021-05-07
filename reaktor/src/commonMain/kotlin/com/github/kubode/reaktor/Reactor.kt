@@ -110,12 +110,14 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     }
 
     protected fun publish(event: EventT) {
+        log("Publish: $event")
         reactorScope.launch {
             _event.emit(event)
         }
     }
 
     protected fun error(error: Throwable) {
+        log("Error: $error")
         reactorScope.launch {
             _error.emit(error)
         }

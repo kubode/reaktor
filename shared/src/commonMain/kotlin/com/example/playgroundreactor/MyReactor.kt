@@ -2,6 +2,7 @@ package com.example.playgroundreactor
 
 import com.example.playgroundreactor.MyReactor.*
 import com.github.kubode.reaktor.BaseReactor
+import com.github.kubode.reaktor.log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -24,8 +25,7 @@ class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
     )
 
     sealed class Event {
-        object SubmitSucceeded : Event()
-        data class Error(val cause: Throwable) : Event()
+        data class SubmitSucceeded(val text: String) : Event()
     }
 
     override fun mutate(action: Action): Flow<Mutation> = flow {
@@ -34,17 +34,17 @@ class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
                 emit(Mutation.SetText(action.text))
             }
             Action.Submit -> {
+                val currentState = currentState
                 if (currentState.isSubmitting) {
                     return@flow
                 }
                 emit(Mutation.SetSubmitting(true))
                 try {
                     doSubmit()
-                    publish(Event.SubmitSucceeded)
+                    publish(Event.SubmitSucceeded(currentState.text))
+                    emit(Mutation.SetText(""))
                 } catch (e: SubmitException) {
                     error(e)
-                    // or
-                    publish(Event.Error(e))
                 } finally {
                     emit(Mutation.SetSubmitting(false))
                 }
@@ -69,6 +69,7 @@ private class SubmitException : Exception("Error occurred during submit.")
 private suspend fun doSubmit() {
     delay(1000)
     if (Random.Default.nextBoolean()) {
+        log("doSubmit throws")
         throw SubmitException()
     }
 }

@@ -1,21 +1,17 @@
 import SwiftUI
 import shared
 
-extension KotlinThrowable: Identifiable {}
-
 struct ContentView: View {
     
     @EnvironmentObject
-    var reactor: AnyReactor<MyReactor.Action, MyReactor.State, MyReactor.Event>
+    var reactor: AnySwiftUIReactor<MyReactor.Action, MyReactor.State, MyReactor.Event>
 
-    @ReactorState(\Self.reactor)
-    var state: MyReactor.State
-
-    @ActionBinding(\Self.reactor, valueKeyPath: \.text, action: { MyReactor.ActionUpdateText(text: $0) })
-    var text: String
-
-    @State
-    private var error: KotlinThrowable? = nil
+    var text: Binding<String> {
+        Binding(
+            get: { reactor.state.text },
+            set: { reactor.send(MyReactor.ActionUpdateText(text: $0)) }
+        )
+    }
 
     var body: some View {
         VStack {
@@ -23,26 +19,27 @@ struct ContentView: View {
                 .font(.title)
             TextField(
                 "Input text",
-                text: $text
+                text: text
             )
             Button(
                 action: {
-                    NSLog("Sending")
-                    reactor.send(action: MyReactor.ActionSubmit())
+                    reactor.send(MyReactor.ActionSubmit())
                 },
                 label: {
                     Text("Submit")
                 }
             )
-            if state.isSubmitting {
+
+            if reactor.state.isSubmitting {
                 ProgressView()
             }
-        }
-        .alert(item: $error) {
-            Alert(title: Text("Error!"), message: Text($0.message ?? ""))
-        }
-        .onReceive(reactor.error) {
-            error = $0
+
+            Spacer().alert(item: $reactor.event) {
+                Alert(title: Text("Succeeded!"), message: Text("\($0)"))
+            }
+            Spacer().alert(item: $reactor.error) {
+                Alert(title: Text("Error!"), message: Text($0.message ?? ""))
+            }
         }
     }
 }

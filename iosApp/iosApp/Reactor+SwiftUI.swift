@@ -3,38 +3,51 @@ import shared
 import Combine
 import SwiftUI
 
-protocol Reactor: ObservableObject {
-    associatedtype Action
-    associatedtype State
-    associatedtype Event
+protocol SwiftUIReactor: Reactor, ObservableObject {
+    var state: State { get }
+    var event: Event? { get }
+    var error: KotlinThrowable? { get }
+}
 
-    var currentState: State { get }
-    var state: AnyPublisher<State, Never> { get }
-    var event: AnyPublisher<Event, Never> { get }
-    var error: AnyPublisher<KotlinThrowable, Never> { get }
-    func send(action: Action)
+extension KotlinBase: Identifiable {}
+
+final class AnySwiftUIReactor<Action: AnyObject, State: AnyObject, Event: AnyObject>: SwiftUIReactor {
+
+    private let reactor: ReaktorAbstractReactor<Action, State, Event>
+
+    private var jobs: [Kotlinx_coroutines_coreJob] = []
+
+    init(reactor: ReaktorAbstractReactor<Action, State, Event>) {
+        self.reactor = reactor
+        self.state = reactor.currentState
+        jobs = [
+            reactor.state.subscribeInMainScope { self.state = $0 },
+            reactor.event.subscribeInMainScope { self.event = $0 },
+            reactor.error.subscribeInMainScope { self.error = $0 },
+        ]
+    }
+
+    deinit {
+        jobs.forEach { $0.cancel(cause: nil) }
+        reactor.destroy()
+    }
+
+    @Published
+    private(set) var state: State
+
+    @Published
+    var event: Event?
+
+    @Published
+    var error: KotlinThrowable?
+
+    func send(_ action: Action) {
+        reactor.send(action: action)
+    }
 }
 
 @propertyWrapper
-struct ReactorState<SelfType, ReactorType: Reactor>: DynamicProperty {
-
-    init(_ reactorKeyPath: KeyPath<SelfType, ReactorType>) {
-    }
-
-    @EnvironmentObject
-    private var reactor: ReactorType
-
-    var wrappedValue: ReactorType.State {
-        reactor.currentState
-    }
-
-    var projectedValue: AnyPublisher<ReactorType.State, Never> {
-        reactor.state
-    }
-}
-
-@propertyWrapper
-struct ActionBinding<SelfType, ReactorType: Reactor, Value>: DynamicProperty {
+struct ActionBinding<SelfType, ReactorType: SwiftUIReactor, Value>: DynamicProperty {
 
     private let valueKeyPath: KeyPath<ReactorType.State, Value>
     private let action: (Value) -> ReactorType.Action
@@ -54,87 +67,8 @@ struct ActionBinding<SelfType, ReactorType: Reactor, Value>: DynamicProperty {
 
     var projectedValue: Binding<Value> {
         Binding(
-            get: { reactor.currentState[keyPath: valueKeyPath] },
-            set: { reactor.send(action: action($0)) }
+            get: { reactor.state[keyPath: valueKeyPath] },
+            set: { reactor.send(action($0)) }
         )
-    }
-}
-
-final class AnyReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : Reactor {
-
-    private let reactor: ReaktorAbstractReactor<Action, State, Event>
-
-    init(reactor: ReaktorAbstractReactor<Action, State, Event>) {
-        self.reactor = reactor
-    }
-
-    deinit {
-        reactor.destroy()
-    }
-@Published
-    var text: String?
-    var currentState: State {
-        reactor.currentState
-    }
-
-    var state: AnyPublisher<State, Never> {
-        FlowPublisher(flow: reactor.state).eraseToAnyPublisher()
-    }
-
-    var event: AnyPublisher<Event, Never> {
-        FlowPublisher(flow: reactor.event).eraseToAnyPublisher()
-    }
-
-    var error: AnyPublisher<KotlinThrowable, Never> {
-        FlowPublisher(flow: reactor.error).eraseToAnyPublisher()
-    }
-
-    func send(action: Action) {
-        reactor.send(action: action)
-    }
-}
-
-extension AnyPublisher: DynamicProperty {
-    var projectedValue: AnyPublisher<Output, Failure> {
-        get { self }
-        set { fatalError() }
-    }
-}
-
-struct FlowPublisher<Output, Failure>: Publisher where Output: AnyObject, Failure: Error {
-
-    private let flow: ReaktorFlowWrapper<Output>
-
-    init(flow: ReaktorFlowWrapper<Output>) {
-        self.flow = flow
-    }
-
-    func receive<S>(subscriber: S) where S : Subscriber, Self.Failure == S.Failure, Self.Output == S.Input {
-        NSLog("FlowPublisher receive")
-        subscriber.receive(subscription: Subscription(flow: flow, target: subscriber))
-    }
-}
-
-private extension FlowPublisher {
-
-    final class Subscription<Target: Subscriber>: Combine.Subscription where Target.Input == Output {
-
-        private let job: Kotlinx_coroutines_coreJob
-
-        init(flow: ReaktorFlowWrapper<Output>, target: Target) {
-            NSLog("Subscription init")
-            job = flow.subscribeInMainScope {
-                NSLog("\($0)")
-                _ = target.receive($0)
-            }
-        }
-
-        func request(_ demand: Subscribers.Demand) {
-        }
-
-        func cancel() {
-            NSLog("Cancelled")
-            job.cancel(cause: nil)
-        }
     }
 }
