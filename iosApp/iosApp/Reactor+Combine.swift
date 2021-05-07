@@ -6,18 +6,30 @@ protocol CombineReactor: Reactor {
     var currentState: State { get }
     var state: AnyPublisher<State, Never> { get }
     var event: AnyPublisher<Event, Never> { get }
-    var error: AnyPublisher<Error, Never> { get }
+    var error: AnyPublisher<KotlinThrowable, Never> { get }
 }
 
-final class AnyReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : Reactor {
+final class AnyCombineReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : CombineReactor {
 
     private let reactor: ReaktorAbstractReactor<Action, State, Event>
 
+    private var job: Kotlinx_coroutines_coreJob?
+
     init(reactor: ReaktorAbstractReactor<Action, State, Event>) {
         self.reactor = reactor
+        self._state = CurrentValueSubject(reactor.currentState)
+        self._event = PassthroughSubject()
+        self._error = PassthroughSubject()
+
+        job = reactor.collectInReactorScope(
+            onState: { self._state.value = $0 },
+            onEvent: { self._event.send($0) },
+            onError: { self._error.send($0) }
+        )
     }
 
     deinit {
+        job?.cancel(cause: nil)
         reactor.destroy()
     }
 
@@ -25,57 +37,22 @@ final class AnyReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : 
         reactor.currentState
     }
 
+    private let _state: CurrentValueSubject<State, Never>
     var state: AnyPublisher<State, Never> {
-        FlowPublisher(flow: reactor.state).eraseToAnyPublisher()
+        _state.eraseToAnyPublisher()
     }
 
+    private let _event: PassthroughSubject<Event, Never>
     var event: AnyPublisher<Event, Never> {
-        FlowPublisher(flow: reactor.event).eraseToAnyPublisher()
+        _event.eraseToAnyPublisher()
     }
 
+    private let _error: PassthroughSubject<KotlinThrowable, Never>
     var error: AnyPublisher<KotlinThrowable, Never> {
-        FlowPublisher(flow: reactor.error).eraseToAnyPublisher()
+        _error.eraseToAnyPublisher()
     }
 
     func send(_ action: Action) {
         reactor.send(action: action)
-    }
-}
-
-struct FlowPublisher<Output, Failure>: Publisher where Output: AnyObject, Failure: Error {
-
-    private let flow: ReaktorFlowWrapper<Output>
-
-    init(flow: ReaktorFlowWrapper<Output>) {
-        self.flow = flow
-    }
-
-    func receive<S>(subscriber: S) where S : Subscriber, Self.Failure == S.Failure, Self.Output == S.Input {
-        NSLog("FlowPublisher receive")
-        subscriber.receive(subscription: Subscription(flow: flow, target: subscriber))
-    }
-}
-
-private extension FlowPublisher {
-
-    final class Subscription<Target: Subscriber>: Combine.Subscription where Target.Input == Output {
-
-        private let job: Kotlinx_coroutines_coreJob
-
-        init(flow: ReaktorFlowWrapper<Output>, target: Target) {
-            NSLog("Subscription init")
-            job = flow.subscribeInMainScope {
-                NSLog("\($0)")
-                _ = target.receive($0)
-            }
-        }
-
-        func request(_ demand: Subscribers.Demand) {
-        }
-
-        func cancel() {
-            NSLog("Cancelled")
-            job.cancel(cause: nil)
-        }
     }
 }

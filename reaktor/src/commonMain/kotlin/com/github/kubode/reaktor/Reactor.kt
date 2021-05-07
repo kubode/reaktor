@@ -14,25 +14,18 @@ interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
     fun destroy()
 }
 
-class FlowWrapper<T : Any>(private val flow: Flow<T>) : Flow<T> by flow {
-    fun subscribeInMainScope(block: (T) -> Unit): Job {
-        return MainScope().launch {
-            collect {
-                block(it)
-            }
-        }
-    }
-}
-
 // Exposed to Native
 abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> :
     Reactor<ActionT, StateT, EventT> {
     // Overrides generics for Native interoperability.
     abstract override val currentState: StateT
-    abstract override val state: FlowWrapper<StateT>
-    abstract override val event: FlowWrapper<EventT>
-    abstract override val error: FlowWrapper<Throwable>
     abstract override fun send(action: ActionT)
+
+    abstract fun collectInReactorScope(
+        onState: (StateT) -> Unit,
+        onEvent: (EventT) -> Unit,
+        onError: (Throwable) -> Unit,
+    ): Job
 }
 
 // Internal
@@ -43,14 +36,14 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     private val _actions: MutableSharedFlow<ActionT> = MutableSharedFlow()
 
     private val _state: MutableStateFlow<StateT> = MutableStateFlow(initialState)
-    final override val state: FlowWrapper<StateT> = FlowWrapper(_state)
+    final override val state: Flow<StateT> = _state
     final override val currentState: StateT get() = _state.value
 
     private val _event: MutableSharedFlow<EventT> = MutableSharedFlow()
-    final override val event: FlowWrapper<EventT> = FlowWrapper(_event)
+    final override val event: Flow<EventT> = _event
 
     private val _error: MutableSharedFlow<Throwable> = MutableSharedFlow()
-    final override val error: FlowWrapper<Throwable> = FlowWrapper(_error)
+    final override val error: Flow<Throwable> = _error
 
     private val job: Job = SupervisorJob()
 
@@ -120,6 +113,18 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         log("Error: $error")
         reactorScope.launch {
             _error.emit(error)
+        }
+    }
+
+    final override fun collectInReactorScope(
+        onState: (StateT) -> Unit,
+        onEvent: (EventT) -> Unit,
+        onError: (Throwable) -> Unit,
+    ): Job {
+        return reactorScope.launch {
+            launch { state.collect { onState(it) } }
+            launch { event.collect { onEvent(it) } }
+            launch { error.collect { onError(it) } }
         }
     }
 }

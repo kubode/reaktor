@@ -15,20 +15,20 @@ final class AnySwiftUIReactor<Action: AnyObject, State: AnyObject, Event: AnyObj
 
     private let reactor: ReaktorAbstractReactor<Action, State, Event>
 
-    private var jobs: [Kotlinx_coroutines_coreJob] = []
+    private var job: Kotlinx_coroutines_coreJob?
 
     init(reactor: ReaktorAbstractReactor<Action, State, Event>) {
         self.reactor = reactor
         self.state = reactor.currentState
-        jobs = [
-            reactor.state.subscribeInMainScope { self.state = $0 },
-            reactor.event.subscribeInMainScope { self.event = $0 },
-            reactor.error.subscribeInMainScope { self.error = $0 },
-        ]
+        job = reactor.collectInReactorScope(
+            onState: { self.state = $0 },
+            onEvent: { self.event = $0 },
+            onError: { self.error = $0 }
+        )
     }
 
     deinit {
-        jobs.forEach { $0.cancel(cause: nil) }
+        job?.cancel(cause: nil)
         reactor.destroy()
     }
 
