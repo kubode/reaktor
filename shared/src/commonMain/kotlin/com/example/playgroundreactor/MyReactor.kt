@@ -31,6 +31,7 @@ class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
     override fun mutate(action: Action): Flow<Mutation> = flow {
         when (action) {
             is Action.UpdateText -> {
+                delay(100)
                 emit(Mutation.SetText(action.text))
             }
             Action.Submit -> {

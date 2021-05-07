@@ -10,7 +10,9 @@
 		2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2152FB032600AC8F00CF470E /* iOSApp.swift */; };
 		7555FF83242A565900829871 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF82242A565900829871 /* ContentView.swift */; };
 		9594ABDDF06308D9AF50DC4B /* Pods_iosApp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50955D5C2F8801C8085779D0 /* Pods_iosApp.framework */; };
-		DDE139942643FBB90062799B /* NativeReactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDE139932643FBB90062799B /* NativeReactor.swift */; };
+		DD1488B3264548B900EC5F01 /* Reactor+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1488B2264548B900EC5F01 /* Reactor+SwiftUI.swift */; };
+		DD1488B726454C1300EC5F01 /* Reactor+Combine.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1488B626454C1300EC5F01 /* Reactor+Combine.swift */; };
+		DD1488BB26454C2700EC5F01 /* Reactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1488BA26454C2700EC5F01 /* Reactor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,7 +23,9 @@
 		7555FF7B242A565900829871 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7555FF82242A565900829871 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7555FF8C242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		DDE139932643FBB90062799B /* NativeReactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeReactor.swift; sourceTree = "<group>"; };
+		DD1488B2264548B900EC5F01 /* Reactor+SwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Reactor+SwiftUI.swift"; sourceTree = "<group>"; };
+		DD1488B626454C1300EC5F01 /* Reactor+Combine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Reactor+Combine.swift"; sourceTree = "<group>"; };
+		DD1488BA26454C2700EC5F01 /* Reactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reactor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,7 +73,9 @@
 				7555FF82242A565900829871 /* ContentView.swift */,
 				7555FF8C242A565B00829871 /* Info.plist */,
 				2152FB032600AC8F00CF470E /* iOSApp.swift */,
-				DDE139932643FBB90062799B /* NativeReactor.swift */,
+				DD1488B2264548B900EC5F01 /* Reactor+SwiftUI.swift */,
+				DD1488B626454C1300EC5F01 /* Reactor+Combine.swift */,
+				DD1488BA26454C2700EC5F01 /* Reactor.swift */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -176,9 +182,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DDE139942643FBB90062799B /* NativeReactor.swift in Sources */,
+				DD1488B726454C1300EC5F01 /* Reactor+Combine.swift in Sources */,
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
+				DD1488B3264548B900EC5F01 /* Reactor+SwiftUI.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
+				DD1488BB26454C2700EC5F01 /* Reactor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

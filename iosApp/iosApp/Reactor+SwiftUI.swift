@@ -7,7 +7,7 @@ protocol Reactor: ObservableObject {
     associatedtype Action
     associatedtype State
     associatedtype Event
-    
+
     var currentState: State { get }
     var state: AnyPublisher<State, Never> { get }
     var event: AnyPublisher<Event, Never> { get }
@@ -23,35 +23,35 @@ struct ReactorState<SelfType, ReactorType: Reactor>: DynamicProperty {
 
     @EnvironmentObject
     private var reactor: ReactorType
-    
+
     var wrappedValue: ReactorType.State {
         reactor.currentState
     }
-    
-    var projectedValue: Binding<Value> {
-        get { target.wrappedValue.mutate(binding: keyPath, action) }
+
+    var projectedValue: AnyPublisher<ReactorType.State, Never> {
+        reactor.state
     }
 }
 
 @propertyWrapper
 struct ActionBinding<SelfType, ReactorType: Reactor, Value>: DynamicProperty {
-    
+
     private let valueKeyPath: KeyPath<ReactorType.State, Value>
     private let action: (Value) -> ReactorType.Action
-    
+
     init(_ reactorKeyPath: KeyPath<SelfType, ReactorType>, valueKeyPath: KeyPath<ReactorType.State, Value>, action: @escaping (Value) -> ReactorType.Action) {
         self.valueKeyPath = valueKeyPath
         self.action = action
     }
-    
+
     @EnvironmentObject
     private var reactor: ReactorType
-    
+
     var wrappedValue: Value {
         get { projectedValue.wrappedValue }
         nonmutating set { projectedValue.wrappedValue = newValue }
     }
-    
+
     var projectedValue: Binding<Value> {
         Binding(
             get: { reactor.currentState[keyPath: valueKeyPath] },
@@ -61,42 +61,50 @@ struct ActionBinding<SelfType, ReactorType: Reactor, Value>: DynamicProperty {
 }
 
 final class AnyReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : Reactor {
-    
+
     private let reactor: ReaktorAbstractReactor<Action, State, Event>
-    
+
     init(reactor: ReaktorAbstractReactor<Action, State, Event>) {
         self.reactor = reactor
     }
-    
+
     deinit {
         reactor.destroy()
     }
-
+@Published
+    var text: String?
     var currentState: State {
         reactor.currentState
     }
-    
+
     var state: AnyPublisher<State, Never> {
         FlowPublisher(flow: reactor.state).eraseToAnyPublisher()
     }
-    
+
     var event: AnyPublisher<Event, Never> {
         FlowPublisher(flow: reactor.event).eraseToAnyPublisher()
     }
-    
+
     var error: AnyPublisher<KotlinThrowable, Never> {
         FlowPublisher(flow: reactor.error).eraseToAnyPublisher()
     }
-    
+
     func send(action: Action) {
         reactor.send(action: action)
+    }
+}
+
+extension AnyPublisher: DynamicProperty {
+    var projectedValue: AnyPublisher<Output, Failure> {
+        get { self }
+        set { fatalError() }
     }
 }
 
 struct FlowPublisher<Output, Failure>: Publisher where Output: AnyObject, Failure: Error {
 
     private let flow: ReaktorFlowWrapper<Output>
-    
+
     init(flow: ReaktorFlowWrapper<Output>) {
         self.flow = flow
     }
@@ -108,11 +116,11 @@ struct FlowPublisher<Output, Failure>: Publisher where Output: AnyObject, Failur
 }
 
 private extension FlowPublisher {
-    
+
     final class Subscription<Target: Subscriber>: Combine.Subscription where Target.Input == Output {
-        
+
         private let job: Kotlinx_coroutines_coreJob
-        
+
         init(flow: ReaktorFlowWrapper<Output>, target: Target) {
             NSLog("Subscription init")
             job = flow.subscribeInMainScope {
@@ -120,10 +128,10 @@ private extension FlowPublisher {
                 _ = target.receive($0)
             }
         }
-        
+
         func request(_ demand: Subscribers.Demand) {
         }
-        
+
         func cancel() {
             NSLog("Cancelled")
             job.cancel(cause: nil)

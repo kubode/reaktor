@@ -1,6 +1,8 @@
 import SwiftUI
 import shared
 
+extension KotlinThrowable: Identifiable {}
+
 struct ContentView: View {
     
     @EnvironmentObject
@@ -12,16 +14,16 @@ struct ContentView: View {
     @ActionBinding(\Self.reactor, valueKeyPath: \.text, action: { MyReactor.ActionUpdateText(text: $0) })
     var text: String
 
+    @State
+    private var error: KotlinThrowable? = nil
+
     var body: some View {
         VStack {
             Text("Playground")
                 .font(.title)
             TextField(
                 "Input text",
-                text: $text,
-                onEditingChanged: { isEditing in
-                    reactor.send(action: MyReactor.ActionUpdateText(text: text))
-                }
+                text: $text
             )
             Button(
                 action: {
@@ -35,8 +37,12 @@ struct ContentView: View {
             if state.isSubmitting {
                 ProgressView()
             }
-        }.onReceive(reactor.error) {
-            NSLog("Error: \($0)")
+        }
+        .alert(item: $error) {
+            Alert(title: Text("Error!"), message: Text($0.message ?? ""))
+        }
+        .onReceive(reactor.error) {
+            error = $0
         }
     }
 }
