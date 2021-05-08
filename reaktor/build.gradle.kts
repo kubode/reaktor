@@ -22,12 +22,12 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.4.3-native-mt")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0-RC-native-mt")
             }
         }
         val androidTest by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.4.3-native-mt")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.0-RC-native-mt")
                 implementation("androidx.test:runner:1.3.0")
                 implementation("androidx.test:rules:1.3.0")
                 implementation("androidx.test.ext:junit:1.1.2")
