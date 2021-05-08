@@ -46,12 +46,8 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
 
     private val job: Job = SupervisorJob()
 
-    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        error(throwable)
-    }
-
     protected val reactorScope: CoroutineScope =
-        CoroutineScope(job + Dispatchers.Main + exceptionHandler)
+        CoroutineScope(job + Dispatchers.Main)
 
     init {
         reactorScope.launch {
@@ -92,16 +88,12 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         return mutation
     }
 
-    protected fun publish(event: EventT) {
-        reactorScope.launch {
-            _event.emit(event)
-        }
+    protected suspend fun publish(event: EventT) {
+        _event.emit(event)
     }
 
-    protected fun error(error: Throwable) {
-        reactorScope.launch {
-            _error.emit(error)
-        }
+    protected suspend fun error(error: Throwable) {
+        _error.emit(error)
     }
 
     final override fun collectInReactorScope(
