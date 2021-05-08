@@ -3,6 +3,13 @@ plugins {
     id("com.android.library")
 }
 
+repositories {
+    // Turbine
+    maven {
+        url = uri( "https://oss.sonatype.org/content/repositories/snapshots/")
+    }
+}
+
 kotlin {
     android()
     ios()
@@ -17,7 +24,8 @@ kotlin {
             dependencies {
                 implementation(kotlin("test"))
                 implementation("io.kotest:kotest-assertions-core:4.5.0")
-                implementation("app.cash.turbine:turbine:0.4.1")
+//                implementation("app.cash.turbine:turbine:0.4.1")
+                implementation("app.cash.turbine:turbine:0.5.0-SNAPSHOT")
             }
         }
         val androidMain by getting {
