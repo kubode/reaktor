@@ -2,6 +2,7 @@ package com.github.kubode.reaktor
 
 import app.cash.turbine.test
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlin.test.Test
@@ -27,7 +28,10 @@ class ReactorTest : BaseTest() {
                     is Action.Submit -> {
                         emit(Mutation.SetLoading(true))
                         try {
+                            action.run()
                             publish(Event.Succeeded)
+                        } catch (e: ExpectedException) {
+                            error(e)
                         } finally {
                             emit(Mutation.SetLoading(false))
                         }
@@ -59,7 +63,7 @@ class ReactorTest : BaseTest() {
 
     private sealed class Action {
         data class UpdateText(val text: String) : Action()
-        object Submit : Action()
+        data class Submit(val run: suspend () -> Unit) : Action()
     }
 
     private sealed class Mutation {
@@ -76,7 +80,8 @@ class ReactorTest : BaseTest() {
         object Succeeded : Event()
     }
 
-    private class ExpectedException(message: String) : Exception(message)
+    private class ExpectedException : Exception()
+    private class UnexpectedException : Exception()
 
     @Test
     fun `test currentState when initialized then it returns initialState`() = runTest {
@@ -129,5 +134,22 @@ class ReactorTest : BaseTest() {
             expectNoEvents()
             cancel()
         }
+    }
+
+    @Test
+    fun `test error when expected exception thrown then it emits`() = runTest {
+        val reactor = TestReactor()
+
+        reactor.error.test {
+            reactor.send(Action.Submit { throw ExpectedException() })
+            expectItem().shouldBeInstanceOf<ExpectedException>()
+        }
+    }
+
+    @Test
+    fun `test error when unexpected exception thrown then crashes`() = runTest {
+        val reactor = TestReactor()
+
+        reactor.send(Action.Submit { throw UnexpectedException() })
     }
 }
