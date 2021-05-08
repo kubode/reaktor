@@ -1,13 +1,13 @@
 package com.github.kubode.reaktor
 
+import app.cash.turbine.test
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import kotlin.test.Test
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 class ReactorTest : BaseTest() {
 
     private class TestReactor(
@@ -79,18 +79,50 @@ class ReactorTest : BaseTest() {
     private class ExpectedException(message: String) : Exception(message)
 
     @Test
-    fun `test currentState when initialized then it returns initialState`() = runBlocking {
+    fun `test currentState when initialized then it returns initialState`() = runTest {
         val reactor = TestReactor(initialState = State(text = "init"))
 
         reactor.currentState shouldBe State(text = "init")
     }
 
     @Test
-    fun `test currentState when state changed then it returns reduced state`() = runBlocking {
+    fun `test currentState when state changed then it returns reduced state`() = runTest {
         val reactor = TestReactor()
 
         reactor.send(Action.UpdateText("test"))
 
         reactor.currentState.text shouldBe "test"
+    }
+
+    @Test
+    fun `test state when initialized then it emits only initialState`() = runTest {
+        val reactor = TestReactor(initialState = State(text = "init"))
+
+        reactor.state.test {
+            expectItem() shouldBe State(text = "init")
+            expectNoEvents()
+            cancel()
+        }
+    }
+
+    @Test
+    fun `test send when sends many actions after init then actions cached`() = runTest {
+        val reactor = TestReactor()
+
+        val repeats = 100
+        repeat(repeats) {
+            reactor.send(Action.UpdateText(it.toString()))
+        }
+
+        reactor.state.test {
+            expectItem().text shouldBe "" // initialState
+
+            repeat(repeats) {
+                expectItem().text shouldBe it.toString()
+            }
+
+            expectNoEvents()
+            cancel()
+        }
     }
 }
