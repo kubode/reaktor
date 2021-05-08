@@ -86,11 +86,16 @@ class ReactorTest : BaseTest() {
     }
 
     @Test
-    fun `test currentState when state changed then it returns reduced state`() = runTest {
+    fun `test currentState when state changed then it returns new state`() = runTest {
         val reactor = TestReactor()
-
         reactor.send(Action.UpdateText("test"))
 
+        reactor.state.test {
+            expectItem() // initialState
+            expectItem().text shouldBe "test"
+            expectNoEvents()
+            cancel()
+        }
         reactor.currentState.text shouldBe "test"
     }
 
@@ -106,16 +111,16 @@ class ReactorTest : BaseTest() {
     }
 
     @Test
-    fun `test send when sends many actions after init then actions cached`() = runTest {
+    fun `test send when sends many actions then all actions are consumed`() = runTest {
         val reactor = TestReactor()
-
-        val repeats = 100
-        repeat(repeats) {
-            reactor.send(Action.UpdateText(it.toString()))
-        }
 
         reactor.state.test {
             expectItem().text shouldBe "" // initialState
+
+            val repeats = 100
+            repeat(repeats) {
+                reactor.send(Action.UpdateText(it.toString()))
+            }
 
             repeat(repeats) {
                 expectItem().text shouldBe it.toString()
