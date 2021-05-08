@@ -1,11 +1,11 @@
 package com.github.kubode.reaktor
 
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import kotlin.test.Test
 
 class ReactorTest : BaseTest() {
@@ -17,29 +17,35 @@ class ReactorTest : BaseTest() {
         private val onDestroy: () -> Unit = {},
     ) : BaseReactor<Action, Mutation, State, Event>(initialState) {
 
-        override fun mutate(action: Action): Flow<Mutation> = flow {
-            when (action) {
-                is Action.UpdateText -> {
-                    emit(Mutation.SetText(action.text))
-                }
-                is Action.Submit -> {
-                    emit(Mutation.SetLoading(true))
-                    try {
-                        publish(Event.Succeeded)
-                    } finally {
-                        emit(Mutation.SetLoading(false))
+        override fun mutate(action: Action): Flow<Mutation> {
+            println("mutate($action)")
+            return flow {
+                when (action) {
+                    is Action.UpdateText -> {
+                        emit(Mutation.SetText(action.text))
+                    }
+                    is Action.Submit -> {
+                        emit(Mutation.SetLoading(true))
+                        try {
+                            publish(Event.Succeeded)
+                        } finally {
+                            emit(Mutation.SetLoading(false))
+                        }
                     }
                 }
             }
         }
 
-        override fun reduce(state: State, mutation: Mutation): State = when (mutation) {
-            is Mutation.SetText -> state.copy(
-                text = mutation.text
-            )
-            is Mutation.SetLoading -> state.copy(
-                isLoading = mutation.isLoading
-            )
+        override fun reduce(state: State, mutation: Mutation): State {
+            println("reduce($state, $mutation)")
+            return when (mutation) {
+                is Mutation.SetText -> state.copy(
+                    text = mutation.text
+                )
+                is Mutation.SetLoading -> state.copy(
+                    isLoading = mutation.isLoading
+                )
+            }
         }
 
         override fun transformAction(action: Flow<Action>): Flow<Action> =
@@ -73,18 +79,18 @@ class ReactorTest : BaseTest() {
     private class ExpectedException(message: String) : Exception(message)
 
     @Test
-    fun a() {
-        runBlocking {
-            withContext(Dispatchers.Main) {
-                1 + 1 shouldBe 2
-            }
-        }
+    fun `test currentState when initialized then it returns initialState`() = runBlocking {
+        val reactor = TestReactor(initialState = State(text = "init"))
+
+        reactor.currentState shouldBe State(text = "init")
     }
 
     @Test
-    fun test() = runBlocking {
+    fun `test currentState when state changed then it returns reduced state`() = runBlocking {
         val reactor = TestReactor()
 
-        reactor.currentState shouldBe State()
+        reactor.send(Action.UpdateText("test"))
+
+        reactor.currentState.text shouldBe "test"
     }
 }

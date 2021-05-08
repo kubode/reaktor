@@ -32,7 +32,7 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     initialState: StateT,
 ) : AbstractReactor<ActionT, StateT, EventT>() {
 
-    private val _actions: MutableSharedFlow<ActionT> = MutableSharedFlow()
+    private val _actions: MutableSharedFlow<ActionT> = MutableSharedFlow(replay = 1)
 
     private val _state: MutableStateFlow<StateT> = MutableStateFlow(initialState)
     final override val state: Flow<StateT> = _state
