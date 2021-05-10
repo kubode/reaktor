@@ -20,10 +20,13 @@ abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> :
     abstract override val currentState: StateT
     abstract override fun send(action: ActionT)
 
+    /**
+     * Intended to use from iOS.
+     */
     abstract fun collectInReactorScope(
-        onState: (StateT) -> Unit,
-        onEvent: (EventT) -> Unit,
-        onError: (Throwable) -> Unit,
+        onState: ((StateT) -> Unit)? = null,
+        onEvent: ((EventT) -> Unit)? = null,
+        onError: ((Throwable) -> Unit)? = null,
     ): Job
 }
 
@@ -98,14 +101,20 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     }
 
     final override fun collectInReactorScope(
-        onState: (StateT) -> Unit,
-        onEvent: (EventT) -> Unit,
-        onError: (Throwable) -> Unit,
+        onState: ((StateT) -> Unit)?,
+        onEvent: ((EventT) -> Unit)?,
+        onError: ((Throwable) -> Unit)?
     ): Job {
         return reactorScope.launch {
-            launch { state.collect { onState(it) } }
-            launch { event.collect { onEvent(it) } }
-            launch { error.collect { onError(it) } }
+            if (onState != null) {
+                launch { state.collect { onState(it) } }
+            }
+            if (onEvent != null) {
+                launch { event.collect { onEvent(it) } }
+            }
+            if (onError != null) {
+                launch { error.collect { onError(it) } }
+            }
         }
     }
 }
