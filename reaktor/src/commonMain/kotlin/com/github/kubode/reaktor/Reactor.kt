@@ -50,7 +50,7 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
 
     private val job: Job = SupervisorJob()
 
-    protected val reactorScope: CoroutineScope =
+    private val reactorScope: CoroutineScope =
         CoroutineScope(job + Dispatchers.Main)
 
     init {
