@@ -6,7 +6,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "Playground_Reactor"
+rootProject.name = "reaktor-root"
 include(":androidApp")
 include(":shared")
 include(":reaktor")
