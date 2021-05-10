@@ -17,7 +17,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.3-native-mt")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0-RC-native-mt")
             }
         }
         val commonTest by getting {
