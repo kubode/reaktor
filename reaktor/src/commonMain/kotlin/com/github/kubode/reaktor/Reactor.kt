@@ -13,7 +13,7 @@ interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
 }
 
 // Exposed to Native
-abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> :
+abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> internal constructor() :
     Reactor<ActionT, StateT, EventT> {
 
     // Overrides generics for Native interoperability.
