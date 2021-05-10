@@ -7,6 +7,6 @@ pluginManagement {
 }
 
 rootProject.name = "reaktor-root"
-include(":androidApp")
-include(":shared")
+include(":sample:androidApp")
+include(":sample:shared")
 include(":reaktor")
