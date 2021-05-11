@@ -60,9 +60,9 @@ class ReactorTest : BaseTest() {
             }
         }
 
-        override fun Flow<Action>.transform(): Flow<Action> = transformAction(this)
-        override fun Flow<Mutation>.transform(): Flow<Mutation> = transformMutation(this)
-        override fun Flow<State>.transform(): Flow<State> = transformState(this)
+        override fun Flow<Action>.transformAction(): Flow<Action> = transformAction(this)
+        override fun Flow<Mutation>.transformMutation(): Flow<Mutation> = transformMutation(this)
+        override fun Flow<State>.transformState(): Flow<State> = transformState(this)
         override fun onDestroy() = onDestroy.invoke()
     }
 
