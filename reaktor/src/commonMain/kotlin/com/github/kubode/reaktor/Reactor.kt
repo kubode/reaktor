@@ -1,6 +1,7 @@
 package com.github.kubode.reaktor
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 
 interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
@@ -35,6 +36,9 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     initialState: StateT,
 ) : AbstractReactor<ActionT, StateT, EventT>() {
 
+    private val reactorScope: CoroutineScope =
+        CoroutineScope(Job() + Dispatchers.Main)
+
     private val _actions: MutableSharedFlow<ActionT> =
         MutableSharedFlow(replay = Int.MAX_VALUE, extraBufferCapacity = Int.MAX_VALUE)
 
@@ -42,16 +46,13 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     final override val state: Flow<StateT> = _state
     final override val currentState: StateT get() = _state.value
 
-    private val _event: MutableSharedFlow<EventT> = MutableSharedFlow()
-    final override val event: Flow<EventT> = _event
+    private val _event: Channel<EventT> = Channel(Channel.UNLIMITED)
+    final override val event: Flow<EventT> =
+        _event.receiveAsFlow().shareIn(reactorScope, SharingStarted.WhileSubscribed())
 
-    private val _error: MutableSharedFlow<Throwable> = MutableSharedFlow()
-    final override val error: Flow<Throwable> = _error
-
-    private val job: Job = SupervisorJob()
-
-    private val reactorScope: CoroutineScope =
-        CoroutineScope(job + Dispatchers.Main)
+    private val _error: Channel<Throwable> = Channel(Channel.UNLIMITED)
+    final override val error: Flow<Throwable> =
+        _error.receiveAsFlow().shareIn(reactorScope, SharingStarted.WhileSubscribed())
 
     init {
         reactorScope.launch {
@@ -66,7 +67,7 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     }
 
     final override fun destroy() {
-        job.cancel()
+        reactorScope.cancel()
         onDestroy()
     }
 
@@ -93,11 +94,11 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     }
 
     protected suspend fun publish(event: EventT) {
-        _event.emit(event)
+        _event.send(event)
     }
 
     protected suspend fun error(error: Throwable) {
-        _error.emit(error)
+        _error.send(error)
     }
 
     final override fun collectInReactorScope(
