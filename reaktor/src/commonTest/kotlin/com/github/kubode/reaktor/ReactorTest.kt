@@ -1,10 +1,12 @@
 package com.github.kubode.reaktor
 
 import app.cash.turbine.test
+import io.kotest.assertions.timing.eventually
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onEach
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
@@ -100,13 +102,7 @@ class ReactorTest : BaseTest() {
         val reactor = TestReactor()
         reactor.send(Action.UpdateText("test"))
 
-        reactor.state.test {
-            expectItem() // initialState
-            expectItem().text shouldBe "test"
-            expectNoEvents()
-            cancel()
-        }
-        reactor.currentState.text shouldBe "test"
+        eventually { reactor.currentState.text shouldBe "test" }
     }
 
     @Test
@@ -122,23 +118,17 @@ class ReactorTest : BaseTest() {
 
     @Test
     fun `test send when sends many actions then all actions are consumed`() = runTest {
-        val reactor = TestReactor()
+        val receivedActions = mutableListOf<Action>()
+        val reactor = TestReactor(
+            transformAction = { action -> action.onEach { receivedActions += it } }
+        )
 
-        reactor.state.test {
-            expectItem().text shouldBe "" // initialState
-
-            val repeats = 100
-            repeat(repeats) {
-                reactor.send(Action.UpdateText(it.toString()))
-            }
-
-            repeat(repeats) {
-                expectItem().text shouldBe it.toString()
-            }
-
-            expectNoEvents()
-            cancel()
+        val repeats = 100
+        repeat(repeats) {
+            reactor.send(Action.UpdateText(it.toString()))
         }
+        eventually { reactor.currentState.text shouldBe "99" }
+        receivedActions shouldBe (0 until repeats).map { Action.UpdateText(it.toString()) }
     }
 
     @Test
@@ -152,9 +142,12 @@ class ReactorTest : BaseTest() {
     }
 
     @Test
-    fun `test error when unexpected exception thrown then crashes`() = runTest {
+    fun `test error when unexpected exception thrown from mutate then it emits`() = runTest {
         val reactor = TestReactor()
 
-        reactor.send(Action.Submit { throw UnexpectedException() })
+        reactor.error.test {
+            reactor.send(Action.Submit { throw UnexpectedException() })
+            expectItem().shouldBeInstanceOf<UnexpectedException>()
+        }
     }
 }
