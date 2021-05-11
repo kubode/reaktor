@@ -58,7 +58,7 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         reactorScope.launch {
             @Suppress("EXPERIMENTAL_API_USAGE") // for flatMapMerge
             transformAction(_actions)
-                .flatMapMerge { mutate(it) }
+                .flatMapMerge { action -> mutate(action).catch { error(it) } }
                 .let { transformMutation(it) }
                 .collect {
                     _state.value = reduce(currentState, it)
