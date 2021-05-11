@@ -17,6 +17,7 @@ class ReactorTest : BaseTest() {
         initialState: State = State(),
         private val transformAction: (Flow<Action>) -> Flow<Action> = { it },
         private val transformMutation: (Flow<Mutation>) -> Flow<Mutation> = { it },
+        private val transformState: (Flow<State>) -> Flow<State> = { it },
         private val onDestroy: () -> Unit = {},
     ) : BaseReactor<Action, Mutation, State, Event>(initialState) {
 
@@ -59,12 +60,9 @@ class ReactorTest : BaseTest() {
             }
         }
 
-        override fun transformAction(action: Flow<Action>): Flow<Action> =
-            transformAction.invoke(action)
-
-        override fun transformMutation(mutation: Flow<Mutation>): Flow<Mutation> =
-            transformMutation.invoke(mutation)
-
+        override fun Flow<Action>.transform(): Flow<Action> = transformAction(this)
+        override fun Flow<Mutation>.transform(): Flow<Mutation> = transformMutation(this)
+        override fun Flow<State>.transform(): Flow<State> = transformState(this)
         override fun onDestroy() = onDestroy.invoke()
     }
 

@@ -57,12 +57,13 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     init {
         reactorScope.launch {
             @Suppress("EXPERIMENTAL_API_USAGE") // for flatMapMerge
-            transformAction(_actions)
+            _actions
+                .transform()
                 .flatMapMerge { action -> mutate(action).catch { error(it) } }
-                .let { transformMutation(it) }
-                .collect {
-                    _state.value = reduce(currentState, it)
-                }
+                .transform()
+                .map { reduce(currentState, it) }
+                .transform()
+                .collect { _state.value = it }
         }
     }
 
@@ -85,12 +86,16 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         }
     }
 
-    protected open fun transformAction(action: Flow<ActionT>): Flow<ActionT> {
-        return action
+    protected open fun Flow<ActionT>.transform(): Flow<ActionT> {
+        return this
     }
 
-    protected open fun transformMutation(mutation: Flow<MutationT>): Flow<MutationT> {
-        return mutation
+    protected open fun Flow<MutationT>.transform(): Flow<MutationT> {
+        return this
+    }
+
+    protected open fun Flow<StateT>.transform(): Flow<StateT> {
+        return this
     }
 
     protected suspend fun publish(event: EventT) {
