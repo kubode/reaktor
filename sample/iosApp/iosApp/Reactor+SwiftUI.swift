@@ -9,6 +9,12 @@ protocol SwiftUIReactor: Reactor, ObservableObject {
     var error: KotlinThrowable? { get }
 }
 
+protocol TestableSwiftUIReactor: SwiftUIReactor {
+    var state: State { get set }
+    var event: Event? { get set }
+    var error: KotlinThrowable? { get set }
+}
+
 extension KotlinBase: Identifiable {}
 
 final class AnySwiftUIReactor<Action: AnyObject, State: AnyObject, Event: AnyObject>: SwiftUIReactor {
