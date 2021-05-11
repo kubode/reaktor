@@ -41,7 +41,7 @@ class ReactorTest : BaseTest() {
                             action.run()
                             publish(Event.Succeeded)
                         } catch (e: ExpectedException) {
-                            error(e)
+                            error(Error.Expected(e))
                         } finally {
                             emit(Mutation.SetLoading(false))
                         }
@@ -85,6 +85,10 @@ class ReactorTest : BaseTest() {
 
     private sealed class Event {
         object Succeeded : Event()
+    }
+
+    private sealed class Error(cause: Throwable) : Exception(cause) {
+        class Expected(cause: Throwable) : Error(cause)
     }
 
     private class ExpectedException : Exception()
@@ -132,22 +136,27 @@ class ReactorTest : BaseTest() {
     }
 
     @Test
-    fun `test error when expected exception thrown then it emits`() = runTest {
+    fun `test error when expected exception thrown then it emits wrapped`() = runTest {
         val reactor = TestReactor()
 
         reactor.error.test {
             reactor.send(Action.Submit { throw ExpectedException() })
-            expectItem().shouldBeInstanceOf<ExpectedException>()
+            expectItem().shouldBeInstanceOf<Error.Expected>()
         }
     }
 
     @Test
-    fun `test error when unexpected exception thrown from mutate then it emits`() = runTest {
+    fun `test error when unexpected exception thrown then it emits as is`() = runTest {
         val reactor = TestReactor()
 
         reactor.error.test {
             reactor.send(Action.Submit { throw UnexpectedException() })
             expectItem().shouldBeInstanceOf<UnexpectedException>()
         }
+    }
+
+    @Test
+    fun `test error when exception thrown from transformMutation then crash`() = runTest {
+        // TODO
     }
 }
