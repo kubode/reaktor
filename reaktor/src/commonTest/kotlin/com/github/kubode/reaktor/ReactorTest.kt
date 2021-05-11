@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 @ExperimentalTime
 class ReactorTest : BaseTest() {
@@ -18,8 +20,13 @@ class ReactorTest : BaseTest() {
         private val onDestroy: () -> Unit = {},
     ) : BaseReactor<Action, Mutation, State, Event>(initialState) {
 
+        private val timeMark: TimeMark = TimeSource.Monotonic.markNow()
+        private fun log(message: String) {
+            println("[${timeMark.elapsedNow().toIsoString()}] $message")
+        }
+
         override fun mutate(action: Action): Flow<Mutation> {
-            println("mutate($action)")
+            log("mutate($action)")
             return flow {
                 when (action) {
                     is Action.UpdateText -> {
@@ -41,7 +48,7 @@ class ReactorTest : BaseTest() {
         }
 
         override fun reduce(state: State, mutation: Mutation): State {
-            println("reduce($state, $mutation)")
+            log("reduce($state, $mutation)")
             return when (mutation) {
                 is Mutation.SetText -> state.copy(
                     text = mutation.text
