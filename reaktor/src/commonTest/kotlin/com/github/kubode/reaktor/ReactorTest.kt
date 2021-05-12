@@ -4,11 +4,13 @@ import app.cash.turbine.test
 import io.kotest.assertions.timing.eventually
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
@@ -19,11 +21,12 @@ class ReactorTest : BaseTest() {
 
     private class TestReactor(
         initialState: State = State(),
+        context: CoroutineContext = DEFAULT_CONTEXT,
         private val transformAction: (Flow<Action>) -> Flow<Action> = { it },
         private val transformMutation: (Flow<Mutation>) -> Flow<Mutation> = { it },
         private val transformState: (Flow<State>) -> Flow<State> = { it },
         private val onDestroy: () -> Unit = {},
-    ) : BaseReactor<Action, Mutation, State, Event>(initialState) {
+    ) : BaseReactor<Action, Mutation, State, Event>(initialState, context) {
 
         private val timeMark: TimeMark = TimeSource.Monotonic.markNow()
         private fun log(message: String) {
@@ -162,6 +165,13 @@ class ReactorTest : BaseTest() {
 
     @Test
     fun `test error when exception thrown from transformMutation then crash`() = runTest {
-        // TODO
+        var thrown: Throwable? = null
+        val handler = CoroutineExceptionHandler { _, throwable -> thrown = throwable }
+        TestReactor(
+            context = handler,
+            transformMutation = { flow { throw UnexpectedException() } }
+        )
+
+        eventually { thrown.shouldBeInstanceOf<UnexpectedException>() }
     }
 }

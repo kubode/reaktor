@@ -3,6 +3,7 @@ package com.github.kubode.reaktor
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import kotlin.coroutines.CoroutineContext
 
 interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
     val currentState: StateT
@@ -34,10 +35,16 @@ abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> intern
 // Internal
 abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT : Any>(
     initialState: StateT,
+    context: CoroutineContext = DEFAULT_CONTEXT,
 ) : AbstractReactor<ActionT, StateT, EventT>() {
 
+    companion object {
+        val DEFAULT_CONTEXT: CoroutineContext
+            get() = Job() + Dispatchers.Main
+    }
+
     private val reactorScope: CoroutineScope =
-        CoroutineScope(Job() + Dispatchers.Main)
+        CoroutineScope(context)
 
     private val _actions: MutableSharedFlow<ActionT> =
         MutableSharedFlow(replay = Int.MAX_VALUE, extraBufferCapacity = Int.MAX_VALUE)
