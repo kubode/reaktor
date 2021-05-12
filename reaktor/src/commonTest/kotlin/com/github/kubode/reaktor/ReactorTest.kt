@@ -3,9 +3,12 @@ package com.github.kubode.reaktor
 import app.cash.turbine.test
 import io.kotest.assertions.timing.eventually
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
@@ -318,5 +321,25 @@ class ReactorTest : BaseTest() {
             expectNoEvents()
             cancel()
         }
+    }
+
+    @Test
+    fun `test destroy given mutate suspending when destroy then mutate cancelled`() = runTest {
+        val reactor = TestReactor()
+        var called = false
+        var cancellationException: CancellationException? = null
+        reactor.send(Action.Submit {
+            try {
+                called = true
+                delay(Long.MAX_VALUE)
+            } catch (e: CancellationException) {
+                cancellationException = e
+            }
+        })
+        eventually { called shouldBe true }
+
+        reactor.destroy()
+
+        eventually { cancellationException shouldNotBe null }
     }
 }
