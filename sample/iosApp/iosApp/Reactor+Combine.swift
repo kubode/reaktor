@@ -11,11 +11,11 @@ protocol CombineReactor: Reactor {
 
 final class AnyCombineReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : CombineReactor {
 
-    private let reactor: ReaktorAbstractReactor<Action, State, Event>
+    private let reactor: ReaktorNativeReactor<Action, State, Event>
 
     private var job: Kotlinx_coroutines_coreJob?
 
-    init(reactor: ReaktorAbstractReactor<Action, State, Event>) {
+    init(reactor: ReaktorNativeReactor<Action, State, Event>) {
         self.reactor = reactor
         self._state = CurrentValueSubject(reactor.currentState)
         self._event = PassthroughSubject()

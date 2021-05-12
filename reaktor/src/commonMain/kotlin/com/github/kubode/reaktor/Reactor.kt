@@ -72,7 +72,7 @@ interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
  * An abstract class to make it easier to use generics on iOS.
  * Do not use this class except on iOS.
  */
-abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> internal constructor() :
+abstract class NativeReactor<ActionT : Any, StateT : Any, EventT : Any> internal constructor() :
     Reactor<ActionT, StateT, EventT> {
 
     // Overriding generics for the Native interoperability.
@@ -99,7 +99,7 @@ abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> intern
 abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT : Any>(
     initialState: StateT,
     context: CoroutineContext = DEFAULT_CONTEXT,
-) : AbstractReactor<ActionT, StateT, EventT>() {
+) : NativeReactor<ActionT, StateT, EventT>() {
 
     companion object {
         val DEFAULT_CONTEXT: CoroutineContext

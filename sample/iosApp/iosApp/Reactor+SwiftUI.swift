@@ -19,11 +19,11 @@ extension KotlinBase: Identifiable {}
 
 final class AnySwiftUIReactor<Action: AnyObject, State: AnyObject, Event: AnyObject>: SwiftUIReactor {
 
-    private let reactor: ReaktorAbstractReactor<Action, State, Event>
+    private let reactor: ReaktorNativeReactor<Action, State, Event>
 
     private var job: Kotlinx_coroutines_coreJob?
 
-    init(reactor: ReaktorAbstractReactor<Action, State, Event>) {
+    init(reactor: ReaktorNativeReactor<Action, State, Event>) {
         self.reactor = reactor
         self.state = reactor.currentState
         job = reactor.collectInReactorScope(
