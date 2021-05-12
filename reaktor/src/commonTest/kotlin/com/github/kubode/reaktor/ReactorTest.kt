@@ -6,11 +6,10 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
@@ -215,11 +214,32 @@ class ReactorTest : BaseTest() {
     @Test
     fun `test error when collect double then broadcast it to each collector`() = runTest {
         val reactor = TestReactor()
-        val e1 = async { reactor.error.first() }
-        val e2 = async { reactor.error.first() }
+        val exception = UnexpectedException()
+        val job = launch {
+            fun launchAssertion() = launch {
+                reactor.error.test {
+                    expectItem() shouldBeSameInstanceAs exception
+                    expectNoEvents()
+                    cancel()
+                }
+            }
+            launchAssertion()
+            launchAssertion()
+        }
 
-        reactor.send(Action.Submit { throw UnexpectedException() })
+        reactor.send(Action.Submit { throw exception })
+        job.join()
+    }
 
-        e1.await() shouldBeSameInstanceAs e2.await()
+    @Test
+    fun `test error given reactor destroyed then ignored`() = runTest {
+        val reactor = TestReactor()
+
+        reactor.error.test {
+            reactor.destroy()
+            reactor.send(Action.Submit { throw UnexpectedException() })
+            expectNoEvents()
+            cancel()
+        }
     }
 }
