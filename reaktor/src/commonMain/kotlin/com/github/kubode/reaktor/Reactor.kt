@@ -6,11 +6,65 @@ import kotlinx.coroutines.flow.*
 import kotlin.coroutines.CoroutineContext
 
 interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
+    /**
+     * The current state.
+     *
+     * This value is changed after a new state emitted.
+     *
+     * To avoid race conditions, make sure to capture the value when using this value consecutively.
+     */
     val currentState: StateT
+
+    /**
+     * The state flow.
+     *
+     * This flow never completes and never fails.
+     *
+     * A collector of this flow collects [currentState] when start collecting,
+     * and also collects the new state just after state changed.
+     */
     val state: Flow<StateT>
+
+    /**
+     * The event flow.
+     *
+     * This flow never completes and never fails.
+     *
+     * A collector of this flow collects the events published by `publish()`.
+     * Events are cached to this flow until this flow has a collector.
+     * When a first collector starts collecting from this flow,
+     * all of the cached events are emitted to the collector.
+     *
+     * Events are one-time, so a collector cannot collect an event that has been collected again.
+     */
     val event: Flow<EventT>
+
+    /**
+     * The error flow.
+     *
+     * This flow never completes and never fails.
+     *
+     * A collector of this flow collects the errors published by `error()`.
+     * Errors are cached to this flow until this flow has a collector.
+     * When a first collector starts collecting from this flow,
+     * all of the cached errors are emitted to the collector.
+     *
+     * Errors are one-time, so a collector cannot collect an error that has been collected again.
+     */
     val error: Flow<Throwable>
+
+    /**
+     * Sends an action.
+     */
     fun send(action: ActionT)
+
+    /**
+     * Destroys this Reactor.
+     *
+     * Call this when you want to destroy this Reactor.
+     * After this is called, all coroutines in this Reactor are canceled,
+     * and the state will not be updated.
+     */
     fun destroy()
 }
 
@@ -18,7 +72,7 @@ interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
 abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> internal constructor() :
     Reactor<ActionT, StateT, EventT> {
 
-    // Overrides generics for Native interoperability.
+    // Overriding generics for the Native interoperability.
     abstract override val currentState: StateT
     abstract override fun send(action: ActionT)
 
