@@ -131,6 +131,22 @@ class ReactorTest : BaseTest() {
     }
 
     @Test
+    fun `test state when reduced then it emits all changes`() = runTest {
+        val reactor = TestReactor()
+
+        reactor.state.test {
+            expectItem().text shouldBe ""
+
+            val repeats = 100
+            repeat(repeats) { reactor.send(Action.UpdateText(it.toString())) }
+            repeat(repeats) { expectItem().text shouldBe it.toString() }
+
+            expectNoEvents()
+            cancel()
+        }
+    }
+
+    @Test
     fun `test send when sends many actions then all actions are consumed`() = runTest {
         val mutex = Mutex()
         val receivedActions = mutableListOf<Action>()
