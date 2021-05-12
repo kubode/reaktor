@@ -2,17 +2,13 @@ package com.github.kubode.reaktor
 
 import app.cash.turbine.test
 import io.kotest.assertions.timing.eventually
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
@@ -21,6 +17,7 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
+@ExperimentalCoroutinesApi
 @ExperimentalTime
 class ReactorTest : BaseTest() {
 
@@ -371,5 +368,22 @@ class ReactorTest : BaseTest() {
         reactor.destroy()
 
         eventually { cancellationException shouldNotBe null }
+    }
+
+    @Test
+    fun `test transformMutation when external flow emits then state changed`() = runTest {
+        val sharedFlow = MutableSharedFlow<Mutation>()
+        val reactor = TestReactor(transformMutation = { merge(it, sharedFlow) })
+
+        reactor.state.test {
+            expectItem() // initialState
+            // await stream initialized
+            eventually { sharedFlow.subscriptionCount.value shouldBeGreaterThanOrEqual 1 }
+
+            sharedFlow.emit(Mutation.SetText("transformed"))
+            expectItem().text shouldBe "transformed"
+            expectNoEvents()
+            cancel()
+        }
     }
 }
