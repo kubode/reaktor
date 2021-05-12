@@ -68,7 +68,10 @@ interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
     fun destroy()
 }
 
-// Exposed to Native
+/**
+ * An abstract class to make it easier to use generics on iOS.
+ * Do not use this class except on iOS.
+ */
 abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> internal constructor() :
     Reactor<ActionT, StateT, EventT> {
 
@@ -88,7 +91,11 @@ abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> intern
     ): Job
 }
 
-// Internal
+/**
+ * An abstract class of the framework implementation of Reactor.
+ *
+ * Inherit this class if you want to create your own Reactor.
+ */
 abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT : Any>(
     initialState: StateT,
     context: CoroutineContext = DEFAULT_CONTEXT,
@@ -161,10 +168,16 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         return this
     }
 
+    /**
+     * Emits an event to [event] flow.
+     */
     protected suspend fun publish(event: EventT) {
         _event.send(event)
     }
 
+    /**
+     * Emits an error to [error] flow.
+     */
     protected suspend fun error(error: Throwable) {
         _error.send(error)
     }
