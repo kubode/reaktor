@@ -7,6 +7,8 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
@@ -122,9 +124,12 @@ class ReactorTest : BaseTest() {
 
     @Test
     fun `test send when sends many actions then all actions are consumed`() = runTest {
+        val mutex = Mutex()
         val receivedActions = mutableListOf<Action>()
         val reactor = TestReactor(
-            transformAction = { action -> action.onEach { receivedActions += it } }
+            transformAction = { action ->
+                action.onEach { mutex.withLock { receivedActions += it } }
+            }
         )
 
         val repeats = 100
