@@ -78,6 +78,8 @@ abstract class AbstractReactor<ActionT : Any, StateT : Any, EventT : Any> intern
 
     /**
      * Intended to use from iOS.
+     * Do not use from Android.
+     * Please use [Flow.collect] for each flows instead of using this on Android.
      */
     abstract fun collectInReactorScope(
         onState: ((StateT) -> Unit)? = null,
