@@ -190,4 +190,22 @@ class ReactorTest : BaseTest() {
             cancel()
         }
     }
+
+    @Test
+    fun `test error when collect again then all exceptions are emitted`() = runTest {
+        val reactor = TestReactor()
+        reactor.send(Action.Submit { throw UnexpectedException() })
+        reactor.error.test {
+            expectItem().shouldBeInstanceOf<UnexpectedException>()
+            expectNoEvents()
+            cancel()
+        }
+
+        reactor.send(Action.Submit { throw UnexpectedException() })
+        reactor.error.test {
+            expectItem().shouldBeInstanceOf<UnexpectedException>()
+            expectNoEvents()
+            cancel()
+        }
+    }
 }
