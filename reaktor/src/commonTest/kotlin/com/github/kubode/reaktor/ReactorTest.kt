@@ -144,6 +144,20 @@ class ReactorTest : BaseTest() {
     }
 
     @Test
+    fun `test state given many changes when collect then it emits only last state`() = runTest {
+        val reactor = TestReactor()
+        repeat(10) { reactor.send(Action.UpdateText(it.toString())) }
+        reactor.send(Action.UpdateText("last"))
+
+        eventually { reactor.currentState.text shouldBe "last" }
+        reactor.state.test {
+            expectItem().text shouldBe "last"
+            expectNoEvents()
+            cancel()
+        }
+    }
+
+    @Test
     fun `test state given many collectors then broadcasts to each collector`() = runTest {
         val reactor = TestReactor(State("init"))
         val job = launch {
