@@ -143,6 +143,25 @@ class ReactorTest : BaseTest() {
         }
     }
 
+    @Test
+    fun `test state given many collectors then broadcasts to each collector`() = runTest {
+        val reactor = TestReactor(State("init"))
+        val job = launch {
+            fun launchAssertion() = launch {
+                reactor.state.test {
+                    expectItem().text shouldBe "init"
+                    expectItem().text shouldBe "new"
+                    expectNoEvents()
+                    cancel()
+                }
+            }
+            launchAssertion()
+            launchAssertion()
+        }
+
+        reactor.send(Action.UpdateText("new"))
+        job.join()
+    }
 
     @Test
     fun `test state given reactor destroyed then ignored`() = runTest {
