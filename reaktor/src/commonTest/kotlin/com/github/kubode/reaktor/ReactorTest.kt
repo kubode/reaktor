@@ -146,6 +146,20 @@ class ReactorTest : BaseTest() {
         }
     }
 
+
+    @Test
+    fun `test state given reactor destroyed then ignored`() = runTest {
+        val reactor = TestReactor()
+
+        reactor.state.test {
+            expectItem().text shouldBe ""
+            reactor.destroy()
+            reactor.send(Action.UpdateText("test"))
+            expectNoEvents()
+            cancel()
+        }
+    }
+
     @Test
     fun `test send when sends many actions then all actions are consumed`() = runTest {
         val mutex = Mutex()
