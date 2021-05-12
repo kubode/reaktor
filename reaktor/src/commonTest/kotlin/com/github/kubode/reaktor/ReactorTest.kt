@@ -4,8 +4,11 @@ import app.cash.turbine.test
 import io.kotest.assertions.timing.eventually
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Mutex
@@ -207,5 +210,16 @@ class ReactorTest : BaseTest() {
             expectNoEvents()
             cancel()
         }
+    }
+
+    @Test
+    fun `test error when collect double then broadcast it to each collector`() = runTest {
+        val reactor = TestReactor()
+        val e1 = async { reactor.error.first() }
+        val e2 = async { reactor.error.first() }
+
+        reactor.send(Action.Submit { throw UnexpectedException() })
+
+        e1.await() shouldBeSameInstanceAs e2.await()
     }
 }
