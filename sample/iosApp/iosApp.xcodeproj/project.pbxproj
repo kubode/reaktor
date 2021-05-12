@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 51;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -13,6 +13,7 @@
 		DD1488B3264548B900EC5F01 /* Reactor+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1488B2264548B900EC5F01 /* Reactor+SwiftUI.swift */; };
 		DD1488B726454C1300EC5F01 /* Reactor+Combine.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1488B626454C1300EC5F01 /* Reactor+Combine.swift */; };
 		DD1488BB26454C2700EC5F01 /* Reactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD1488BA26454C2700EC5F01 /* Reactor.swift */; };
+		DDF273C2264BFFA400806465 /* Reactor+RxSwift.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDF273C1264BFFA400806465 /* Reactor+RxSwift.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		DD1488B2264548B900EC5F01 /* Reactor+SwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Reactor+SwiftUI.swift"; sourceTree = "<group>"; };
 		DD1488B626454C1300EC5F01 /* Reactor+Combine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Reactor+Combine.swift"; sourceTree = "<group>"; };
 		DD1488BA26454C2700EC5F01 /* Reactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reactor.swift; sourceTree = "<group>"; };
+		DDF273C1264BFFA400806465 /* Reactor+RxSwift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Reactor+RxSwift.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +77,7 @@
 				2152FB032600AC8F00CF470E /* iOSApp.swift */,
 				DD1488B2264548B900EC5F01 /* Reactor+SwiftUI.swift */,
 				DD1488B626454C1300EC5F01 /* Reactor+Combine.swift */,
+				DDF273C1264BFFA400806465 /* Reactor+RxSwift.swift */,
 				DD1488BA26454C2700EC5F01 /* Reactor.swift */,
 			);
 			path = iosApp;
@@ -99,6 +102,7 @@
 				7555FF77242A565900829871 /* Sources */,
 				7555FF79242A565900829871 /* Resources */,
 				6978E431AB1C1557B5E1126A /* Frameworks */,
+				DB9ADAA14CCD38399B0E4615 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -175,6 +179,23 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		DB9ADAA14CCD38399B0E4615 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-iosApp/Pods-iosApp-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -184,6 +205,7 @@
 			files = (
 				DD1488B726454C1300EC5F01 /* Reactor+Combine.swift in Sources */,
 				2152FB042600AC8F00CF470E /* iOSApp.swift in Sources */,
+				DDF273C2264BFFA400806465 /* Reactor+RxSwift.swift in Sources */,
 				DD1488B3264548B900EC5F01 /* Reactor+SwiftUI.swift in Sources */,
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
 				DD1488BB26454C2700EC5F01 /* Reactor.swift in Sources */,

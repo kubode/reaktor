@@ -1,16 +1,23 @@
 PODS:
+  - RxSwift (6.1.0)
   - shared (0.1.0)
 
 DEPENDENCIES:
+  - RxSwift
   - shared (from `../shared`)
+
+SPEC REPOS:
+  trunk:
+    - RxSwift
 
 EXTERNAL SOURCES:
   shared:
     :path: "../shared"
 
 SPEC CHECKSUMS:
+  RxSwift: a834e5c538e89eca0cae86f403f4fbf0336786ce
   shared: 1a00e82c8c4264a2c07b38872fdeb5e75b74d822
 
-PODFILE CHECKSUM: f282da88f39e69507b0a255187c8a6b644477756
+PODFILE CHECKSUM: 7d674153cf007ed6567cbfad9ea5b4ec8c6de498
 
 COCOAPODS: 1.10.0
