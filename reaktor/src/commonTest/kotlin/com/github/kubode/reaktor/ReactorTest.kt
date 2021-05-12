@@ -174,4 +174,20 @@ class ReactorTest : BaseTest() {
 
         eventually { thrown.shouldBeInstanceOf<UnexpectedException>() }
     }
+
+    @Test
+    fun `test error given many error when collect then all exceptions are emitted`() = runTest {
+        val reactor = TestReactor()
+        val repeats = 10
+        repeat(repeats) { reactor.send(Action.Submit { throw UnexpectedException() }) }
+        // await state change
+        reactor.send(Action.UpdateText("new"))
+        eventually { reactor.currentState.text shouldBe "new" }
+
+        reactor.error.test {
+            repeat(repeats) { expectItem().shouldBeInstanceOf<UnexpectedException>() }
+            expectNoEvents()
+            cancel()
+        }
+    }
 }
