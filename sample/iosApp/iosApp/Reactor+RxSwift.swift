@@ -11,42 +11,46 @@ protocol RxSwiftReactor: Reactor {
 
 final class AnyRxSwiftReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : RxSwiftReactor {
 
-    private let reactor: ReaktorNativeReactor<Action, State, Event>
+    private(set) var currentState: State
+    let state: Observable<State>
+    let event: Observable<Event>
+    let error: Observable<KotlinThrowable>
+    private let disposeBag: DisposeBag = DisposeBag()
+    private let action: (Action) -> Void
 
-    private var job: Kotlinx_coroutines_coreJob?
+    init(currentState: State, state: Observable<State>, event: Observable<Event>, error: Observable<KotlinThrowable>, disposable: Disposable, action: @escaping (Action) -> Void) {
+        self.currentState = currentState
+        self.state = state
+        self.event = event
+        self.error = error
+        self.action = action
 
-    init(reactor: ReaktorNativeReactor<Action, State, Event>) {
-        self.reactor = reactor
-        self._state = BehaviorSubject(value: reactor.currentState)
-        self._event = PublishSubject()
-        self._error = PublishSubject()
-
-        job = reactor.collectInReactorScope(
-            onState: { self._state.onNext($0) },
-            onEvent: { self._event.onNext($0) },
-            onError: { self._error.onNext($0) }
-        )
+        disposeBag.insert(disposable)
+        state.subscribe(onNext: { self.currentState = $0 }).disposed(by: disposeBag)
     }
-
-    deinit {
-        job?.cancel(cause: nil)
-        reactor.destroy()
-    }
-
-    var currentState: State {
-        reactor.currentState
-    }
-
-    private let _state: BehaviorSubject<State>
-    var state: Observable<State> { _state }
-
-    private let _event: PublishSubject<Event>
-    var event: Observable<Event> { _event }
-
-    private let _error: PublishSubject<KotlinThrowable>
-    var error: Observable<KotlinThrowable> { _error }
 
     func send(_ action: Action) {
-        reactor.send(action: action)
+        self.action(action)
+    }
+}
+
+extension AnyRxSwiftReactor {
+    convenience init(reactor: ReaktorNativeReactor<Action, State, Event>) {
+        let state = BehaviorSubject(value: reactor.currentState)
+        let event = PublishSubject<Event>()
+        let error = PublishSubject<KotlinThrowable>()
+
+        let job = reactor.collectInReactorScope(
+            onState: { state.onNext($0) },
+            onEvent: { event.onNext($0) },
+            onError: { error.onNext($0) }
+        )
+        let disposable = Disposables.create {
+            job.cancel(cause: nil)
+        }
+
+        let action: (Action) -> Void = { reactor.send(action: $0) }
+
+        self.init(currentState: reactor.currentState, state: state, event: event, error: error, disposable: disposable, action: action)
     }
 }
