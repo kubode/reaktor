@@ -151,7 +151,7 @@ class ReactorTest : BaseTest() {
     }
 
     @Test
-    fun `test error when unexpected exception thrown then it emits as is`() = runTest {
+    fun `test error when unexpected exception thrown from mutate then it emits as is`() = runTest {
         val reactor = TestReactor()
 
         reactor.error.test {
