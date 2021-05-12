@@ -242,4 +242,81 @@ class ReactorTest : BaseTest() {
             cancel()
         }
     }
+
+    @Test
+    fun `test event when event published then it emits`() = runTest {
+        val reactor = TestReactor()
+
+        reactor.event.test {
+            reactor.send(Action.Submit {})
+            expectItem().shouldBeInstanceOf<Event.Succeeded>()
+            expectNoEvents()
+            cancel()
+        }
+    }
+
+    @Test
+    fun `test event given many event when collect then all events are emitted`() = runTest {
+        val reactor = TestReactor()
+        val repeats = 10
+        repeat(repeats) { reactor.send(Action.Submit { }) }
+        // await state change
+        reactor.send(Action.UpdateText("new"))
+        eventually { reactor.currentState.text shouldBe "new" }
+
+        reactor.event.test {
+            repeat(repeats) { expectItem().shouldBeInstanceOf<Event.Succeeded>() }
+            expectNoEvents()
+            cancel()
+        }
+    }
+
+    @Test
+    fun `test event when collect again then all events are emitted`() = runTest {
+        val reactor = TestReactor()
+        reactor.send(Action.Submit {})
+        reactor.event.test {
+            expectItem().shouldBeInstanceOf<Event.Succeeded>()
+            expectNoEvents()
+            cancel()
+        }
+
+        reactor.send(Action.Submit { })
+        reactor.event.test {
+            expectItem().shouldBeInstanceOf<Event.Succeeded>()
+            expectNoEvents()
+            cancel()
+        }
+    }
+
+    @Test
+    fun `test event when collect double then broadcast it to each collector`() = runTest {
+        val reactor = TestReactor()
+        val job = launch {
+            fun launchAssertion() = launch {
+                reactor.event.test {
+                    expectItem().shouldBeInstanceOf<Event.Succeeded>()
+                    expectNoEvents()
+                    cancel()
+                }
+            }
+            launchAssertion()
+            launchAssertion()
+        }
+
+        reactor.send(Action.Submit {})
+        job.join()
+    }
+
+    @Test
+    fun `test event given reactor destroyed then ignored`() = runTest {
+        val reactor = TestReactor()
+
+        reactor.event.test {
+            reactor.destroy()
+            reactor.send(Action.Submit { })
+            expectNoEvents()
+            cancel()
+        }
+    }
 }
