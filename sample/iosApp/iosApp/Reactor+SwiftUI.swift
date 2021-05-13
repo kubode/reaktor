@@ -19,23 +19,16 @@ extension KotlinBase: Identifiable {}
 
 final class AnySwiftUIReactor<Action: AnyObject, State: AnyObject, Event: AnyObject>: SwiftUIReactor {
 
-    private let reactor: ReaktorNativeReactor<Action, State, Event>
+    private var cancellables: Set<AnyCancellable> = []
+    private let action: (Action) -> Void
 
-    private var job: Kotlinx_coroutines_coreJob?
-
-    init(reactor: ReaktorNativeReactor<Action, State, Event>) {
-        self.reactor = reactor
-        self.state = reactor.currentState
-        job = reactor.collectInReactorScope(
-            onState: { self.state = $0 },
-            onEvent: { self.event = $0 },
-            onError: { self.error = $0 }
-        )
-    }
-
-    deinit {
-        job?.cancel(cause: nil)
-        reactor.destroy()
+    init(currentState: State, state: AnyPublisher<State, Never>, event: AnyPublisher<Event, Never>, error: AnyPublisher<KotlinThrowable, Never>, cancellable: Cancellable, action: @escaping (Action) -> Void) {
+        self.state = currentState
+        self.action = action
+        state.sink { self.state = $0 }.store(in: &cancellables)
+        event.sink { self.event = $0 }.store(in: &cancellables)
+        error.sink { self.error = $0 }.store(in: &cancellables)
+        cancellable.store(in: &cancellables)
     }
 
     @Published
@@ -48,6 +41,17 @@ final class AnySwiftUIReactor<Action: AnyObject, State: AnyObject, Event: AnyObj
     var error: KotlinThrowable?
 
     func send(_ action: Action) {
-        reactor.send(action: action)
+        self.action(action)
+    }
+}
+
+extension AnySwiftUIReactor {
+
+    convenience init(combineReactor: AnyCombineReactor<Action, State, Event>) {
+        self.init(currentState: combineReactor.currentState, state: combineReactor.state, event: combineReactor.event, error: combineReactor.error, cancellable: AnyCancellable {}, action: { combineReactor.send($0) })
+    }
+
+    convenience init(reactor: ReaktorNativeReactor<Action, State, Event>) {
+        self.init(combineReactor: AnyCombineReactor(reactor: reactor))
     }
 }
