@@ -2,10 +2,10 @@ package com.example.playgroundreactor
 
 import com.example.playgroundreactor.MyReactor.*
 import com.github.kubode.reaktor.BaseReactor
+import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlin.random.Random
 
 class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
     sealed class Action {
@@ -54,10 +54,10 @@ class MyReactor : BaseReactor<Action, Mutation, State, Event>(State()) {
     override fun reduce(state: State, mutation: Mutation): State {
         return when (mutation) {
             is Mutation.SetText -> state.copy(
-                text = mutation.text
+                text = mutation.text,
             )
             is Mutation.SetSubmitting -> state.copy(
-                isSubmitting = mutation.isSubmitting
+                isSubmitting = mutation.isSubmitting,
             )
         }
     }

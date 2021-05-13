@@ -1,9 +1,22 @@
 package com.github.kubode.reaktor
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.*
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flatMapMerge
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.launch
 
 interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
     /**
@@ -185,7 +198,7 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     final override fun collectInReactorScope(
         onState: ((StateT) -> Unit)?,
         onEvent: ((EventT) -> Unit)?,
-        onError: ((Throwable) -> Unit)?
+        onError: ((Throwable) -> Unit)?,
     ): Job {
         return reactorScope.launch {
             if (onState != null) {

@@ -7,15 +7,23 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @ExperimentalCoroutinesApi
 @ExperimentalTime
@@ -61,10 +69,10 @@ class ReactorTest : BaseTest() {
             log("reduce($state, $mutation)")
             return when (mutation) {
                 is Mutation.SetText -> state.copy(
-                    text = mutation.text
+                    text = mutation.text,
                 )
                 is Mutation.SetLoading -> state.copy(
-                    isLoading = mutation.isLoading
+                    isLoading = mutation.isLoading,
                 )
             }
         }
@@ -197,7 +205,7 @@ class ReactorTest : BaseTest() {
         val reactor = TestReactor(
             transformAction = { action ->
                 action.onEach { mutex.withLock { receivedActions += it } }
-            }
+            },
         )
 
         val repeats = 100
@@ -234,7 +242,7 @@ class ReactorTest : BaseTest() {
         val handler = CoroutineExceptionHandler { _, throwable -> thrown = throwable }
         TestReactor(
             context = handler,
-            transformMutation = { flow { throw UnexpectedException() } }
+            transformMutation = { flow { throw UnexpectedException() } },
         )
 
         eventually { thrown.shouldBeInstanceOf<UnexpectedException>() }
@@ -388,14 +396,16 @@ class ReactorTest : BaseTest() {
         val reactor = TestReactor()
         var called = false
         var cancellationException: CancellationException? = null
-        reactor.send(Action.Submit {
-            try {
-                called = true
-                delay(Long.MAX_VALUE)
-            } catch (e: CancellationException) {
-                cancellationException = e
-            }
-        })
+        reactor.send(
+            Action.Submit {
+                try {
+                    called = true
+                    delay(Long.MAX_VALUE)
+                } catch (e: CancellationException) {
+                    cancellationException = e
+                }
+            },
+        )
         eventually { called shouldBe true }
 
         reactor.destroy()

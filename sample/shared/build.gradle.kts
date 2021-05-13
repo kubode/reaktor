@@ -15,7 +15,7 @@ kotlin {
         frameworkName = "shared"
         podfile = project.file("../iosApp/Podfile")
     }
-    
+
     sourceSets {
         val commonMain by getting {
             dependencies {

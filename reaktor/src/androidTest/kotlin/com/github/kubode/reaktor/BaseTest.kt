@@ -1,6 +1,7 @@
 package com.github.kubode.reaktor
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.concurrent.Executors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -11,12 +12,11 @@ import org.junit.Rule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.junit.runner.RunWith
-import java.util.concurrent.Executors
 
 @ExperimentalCoroutinesApi
 class CoroutineTestRule(
     private val testDispatcher: ExecutorCoroutineDispatcher =
-        Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher(),
 ) : TestWatcher() {
 
     override fun starting(description: Description) {
