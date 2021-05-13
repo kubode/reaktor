@@ -1,6 +1,9 @@
 package com.example.playgroundreactor
 
-import com.example.playgroundreactor.MyReactor.*
+import com.example.playgroundreactor.MyReactor.Action
+import com.example.playgroundreactor.MyReactor.Event
+import com.example.playgroundreactor.MyReactor.Mutation
+import com.example.playgroundreactor.MyReactor.State
 import com.github.kubode.reaktor.BaseReactor
 import kotlin.random.Random
 import kotlinx.coroutines.delay
