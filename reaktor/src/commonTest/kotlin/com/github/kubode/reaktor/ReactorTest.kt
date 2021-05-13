@@ -396,16 +396,15 @@ class ReactorTest : BaseTest() {
         val reactor = TestReactor()
         var called = false
         var cancellationException: CancellationException? = null
-        reactor.send(
-            Action.Submit {
-                try {
-                    called = true
-                    delay(Long.MAX_VALUE)
-                } catch (e: CancellationException) {
-                    cancellationException = e
-                }
-            },
-        )
+        val action = Action.Submit {
+            try {
+                called = true
+                delay(Long.MAX_VALUE)
+            } catch (e: CancellationException) {
+                cancellationException = e
+            }
+        }
+        reactor.send(action)
         eventually { called shouldBe true }
 
         reactor.destroy()
