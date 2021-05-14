@@ -11,48 +11,46 @@ protocol CombineReactor: Reactor {
 
 final class AnyCombineReactor<Action: AnyObject, State: AnyObject, Event: AnyObject> : CombineReactor {
 
-    private let reactor: ReaktorNativeReactor<Action, State, Event>
+    private(set) var currentState: State
+    let state: AnyPublisher<State, Never>
+    let event: AnyPublisher<Event, Never>
+    let error: AnyPublisher<KotlinThrowable, Never>
+    private var cancellables: Set<AnyCancellable> = []
+    private let action: (Action) -> Void
 
-    private var job: Kotlinx_coroutines_coreJob?
+    init(currentState: State, state: AnyPublisher<State, Never>, event: AnyPublisher<Event, Never>, error: AnyPublisher<KotlinThrowable, Never>, cancellable: Cancellable, action: @escaping (Action) -> Void) {
+        self.currentState = currentState
+        self.state = state
+        self.event = event
+        self.error = error
+        self.action = action
 
-    init(reactor: ReaktorNativeReactor<Action, State, Event>) {
-        self.reactor = reactor
-        self._state = CurrentValueSubject(reactor.currentState)
-        self._event = PassthroughSubject()
-        self._error = PassthroughSubject()
-
-        job = reactor.collectInReactorScope(
-            onState: { [weak self] in self?._state.value = $0 },
-            onEvent: { [weak self] in self?._event.send($0) },
-            onError: { [weak self] in self?._error.send($0) }
-        )
-    }
-
-    deinit {
-        job?.cancel(cause: nil)
-        reactor.destroy()
-    }
-
-    var currentState: State {
-        reactor.currentState
-    }
-
-    private let _state: CurrentValueSubject<State, Never>
-    var state: AnyPublisher<State, Never> {
-        _state.eraseToAnyPublisher()
-    }
-
-    private let _event: PassthroughSubject<Event, Never>
-    var event: AnyPublisher<Event, Never> {
-        _event.eraseToAnyPublisher()
-    }
-
-    private let _error: PassthroughSubject<KotlinThrowable, Never>
-    var error: AnyPublisher<KotlinThrowable, Never> {
-        _error.eraseToAnyPublisher()
+        cancellable.store(in: &cancellables)
     }
 
     func send(_ action: Action) {
-        reactor.send(action: action)
+        self.action(action)
+    }
+}
+
+extension AnyCombineReactor {
+
+    convenience init(reactor: ReaktorNativeReactor<Action, State, Event>) {
+        let state = CurrentValueSubject<State, Never>(reactor.currentState)
+        let event = PassthroughSubject<Event, Never>()
+        let error = PassthroughSubject<KotlinThrowable, Never>()
+
+        let job = reactor.collectInReactorScope(
+            onState: { state.value = $0 },
+            onEvent: { event.send($0) },
+            onError: { error.send($0) }
+        )
+        let cancellable = AnyCancellable {
+            job.cancel(cause: nil)
+        }
+
+        let action: (Action) -> Void = { reactor.send(action: $0) }
+
+        self.init(currentState: reactor.currentState, state: state.eraseToAnyPublisher(), event: event.eraseToAnyPublisher(), error: error.eraseToAnyPublisher(), cancellable: cancellable, action: action)
     }
 }
