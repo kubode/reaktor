@@ -9,6 +9,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
+import kotlin.test.fail
 import kotlin.time.ExperimentalTime
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
@@ -20,10 +21,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 @ExperimentalCoroutinesApi
 @ExperimentalTime
@@ -168,52 +168,30 @@ class ReactorTest : BaseTest() {
     @Test
     fun `test state given many collectors then broadcasts to each collector`() = runTest {
         val reactor = TestReactor(State("init"))
-        val job = launch {
-            fun launchAssertion() = launch {
-                reactor.state.test {
-                    expectItem().text shouldBe "init"
-                    expectItem().text shouldBe "new"
-                    expectNoEvents()
-                    cancel()
-                }
+        fun launchAssertion(mutex: Mutex) = launch {
+            reactor.state.test {
+                expectItem().text shouldBe "init"
+                mutex.unlock()
+                expectItem().text shouldBe "new"
             }
-            launchAssertion()
-            launchAssertion()
         }
+
+        val mutexList = List(4) { Mutex(true) }
+        val jobs = mutexList.map { launchAssertion(it) }
+        mutexList.forEach { it.lock() } // Awaits the initial state is emitted for each collectors
 
         reactor.send(Action.UpdateText("new"))
-        job.join()
+        jobs.joinAll()
     }
 
     @Test
-    fun `test state given reactor destroyed then ignored`() = runTest {
-        val reactor = TestReactor()
-
-        reactor.state.test {
-            expectItem().text shouldBe ""
-            reactor.destroy()
-            reactor.send(Action.UpdateText("test"))
-            expectNoEvents()
-            cancel()
-        }
-    }
-
-    @Test
-    fun `test send when sends many actions then all actions are consumed`() = runTest {
-        val mutex = Mutex()
-        val receivedActions = mutableListOf<Action>()
+    fun `test send given reactor destroyed then ignored`() = runTest {
         val reactor = TestReactor(
-            transformAction = { action ->
-                action.onEach { mutex.withLock { receivedActions += it } }
-            },
+            transformAction = { fail("action should be ignored after destroy") },
         )
 
-        val repeats = 100
-        repeat(repeats) {
-            reactor.send(Action.UpdateText(it.toString()))
-        }
-        eventually { reactor.currentState.text shouldBe "99" }
-        receivedActions shouldBe (0 until repeats).map { Action.UpdateText(it.toString()) }
+        reactor.destroy()
+        reactor.send(Action.UpdateText("test"))
     }
 
     @Test
@@ -241,7 +219,7 @@ class ReactorTest : BaseTest() {
         var thrown: Throwable? = null
         val handler = CoroutineExceptionHandler { _, throwable -> thrown = throwable }
         TestReactor(
-            context = handler,
+            context = BaseReactor.DEFAULT_CONTEXT + handler,
             transformMutation = { flow { throw UnexpectedException() } },
         )
 
@@ -396,20 +374,38 @@ class ReactorTest : BaseTest() {
         val reactor = TestReactor()
         var called = false
         var cancellationException: CancellationException? = null
-        val action = Action.Submit {
-            try {
-                called = true
-                delay(Long.MAX_VALUE)
-            } catch (e: CancellationException) {
-                cancellationException = e
-            }
-        }
-        reactor.send(action)
+        reactor.send(
+            Action.Submit {
+                try {
+                    called = true
+                    delay(Long.MAX_VALUE)
+                } catch (e: CancellationException) {
+                    cancellationException = e
+                }
+            },
+        )
         eventually { called shouldBe true }
 
         reactor.destroy()
 
         eventually { cancellationException shouldNotBe null }
+    }
+
+    @Test
+    fun `test transformAction when external flow emits then state changed`() = runTest {
+        val sharedFlow = MutableSharedFlow<Action>()
+        val reactor = TestReactor(transformAction = { merge(it, sharedFlow) })
+
+        reactor.state.test {
+            expectItem() // initialState
+            // await stream initialized
+            eventually { sharedFlow.subscriptionCount.value shouldBeGreaterThanOrEqual 1 }
+
+            sharedFlow.emit(Action.UpdateText("transformed"))
+            expectItem().text shouldBe "transformed"
+            expectNoEvents()
+            cancel()
+        }
     }
 
     @Test
@@ -423,6 +419,23 @@ class ReactorTest : BaseTest() {
             eventually { sharedFlow.subscriptionCount.value shouldBeGreaterThanOrEqual 1 }
 
             sharedFlow.emit(Mutation.SetText("transformed"))
+            expectItem().text shouldBe "transformed"
+            expectNoEvents()
+            cancel()
+        }
+    }
+
+    @Test
+    fun `test transformState when external flow emits then state changed`() = runTest {
+        val sharedFlow = MutableSharedFlow<State>()
+        val reactor = TestReactor(transformState = { merge(it, sharedFlow) })
+
+        reactor.state.test {
+            expectItem() // initialState
+            // await stream initialized
+            eventually { sharedFlow.subscriptionCount.value shouldBeGreaterThanOrEqual 1 }
+
+            sharedFlow.emit(State("transformed", false))
             expectItem().text shouldBe "transformed"
             expectNoEvents()
             cancel()
