@@ -25,9 +25,9 @@ final class AnySwiftUIReactor<Action: AnyObject, State: AnyObject, Event: AnyObj
     init(currentState: State, state: AnyPublisher<State, Never>, event: AnyPublisher<Event, Never>, error: AnyPublisher<KotlinThrowable, Never>, cancellable: Cancellable, action: @escaping (Action) -> Void) {
         self.state = currentState
         self.action = action
-        state.sink { self.state = $0 }.store(in: &cancellables)
-        event.sink { self.event = $0 }.store(in: &cancellables)
-        error.sink { self.error = $0 }.store(in: &cancellables)
+        state.sink { [weak self] in self?.state = $0 }.store(in: &cancellables)
+        event.sink { [weak self] in self?.event = $0 }.store(in: &cancellables)
+        error.sink { [weak self] in self?.error = $0 }.store(in: &cancellables)
         cancellable.store(in: &cancellables)
     }
 

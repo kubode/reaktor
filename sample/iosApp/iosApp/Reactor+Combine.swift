@@ -22,9 +22,9 @@ final class AnyCombineReactor<Action: AnyObject, State: AnyObject, Event: AnyObj
         self._error = PassthroughSubject()
 
         job = reactor.collectInReactorScope(
-            onState: { self._state.value = $0 },
-            onEvent: { self._event.send($0) },
-            onError: { self._error.send($0) }
+            onState: { [weak self] in self?._state.value = $0 },
+            onEvent: { [weak self] in self?._event.send($0) },
+            onError: { [weak self] in self?._error.send($0) }
         )
     }
 

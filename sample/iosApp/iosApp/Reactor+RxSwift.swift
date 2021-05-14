@@ -26,7 +26,7 @@ final class AnyRxSwiftReactor<Action: AnyObject, State: AnyObject, Event: AnyObj
         self.action = action
 
         disposeBag.insert(disposable)
-        state.subscribe(onNext: { self.currentState = $0 }).disposed(by: disposeBag)
+        state.subscribe(onNext: { [weak self] in self?.currentState = $0 }).disposed(by: disposeBag)
     }
 
     func send(_ action: Action) {
