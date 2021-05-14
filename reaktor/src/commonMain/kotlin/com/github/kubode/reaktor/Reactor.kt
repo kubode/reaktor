@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,12 +44,12 @@ interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
      *
      * This flow never completes and never fails.
      *
-     * A collector of this flow collects the events published by `publish()`.
+     * A collector of this flow collects the events published.
      * Events are cached to this flow until this flow has a collector.
      * When a first collector starts collecting from this flow,
      * all of the cached events are emitted to the collector.
      *
-     * Events are one-time, so a collector cannot collect an event that has been collected again.
+     * Events are one-time, so a collector cannot collect an event that has been collected once.
      */
     val event: Flow<EventT>
 
@@ -57,12 +58,12 @@ interface Reactor<ActionT : Any, StateT : Any, EventT : Any> {
      *
      * This flow never completes and never fails.
      *
-     * A collector of this flow collects the errors published by `error()`.
+     * A collector of this flow collects the errors published.
      * Errors are cached to this flow until this flow has a collector.
      * When a first collector starts collecting from this flow,
      * all of the cached errors are emitted to the collector.
      *
-     * Errors are one-time, so a collector cannot collect an error that has been collected again.
+     * Errors are one-time, so a collector cannot collect an error that has been collected once.
      */
     val error: Flow<Throwable>
 
@@ -129,11 +130,11 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     final override val state: Flow<StateT> = _state
     final override val currentState: StateT get() = _state.value
 
-    private val _event: Channel<EventT> = Channel(Channel.UNLIMITED)
+    private val _event: Channel<EventT> = Channel(UNLIMITED)
     final override val event: Flow<EventT> =
         _event.receiveAsFlow().shareIn(reactorScope, SharingStarted.WhileSubscribed())
 
-    private val _error: Channel<Throwable> = Channel(Channel.UNLIMITED)
+    private val _error: Channel<Throwable> = Channel(UNLIMITED)
     final override val error: Flow<Throwable> =
         _error.receiveAsFlow().shareIn(reactorScope, SharingStarted.WhileSubscribed())
 
@@ -160,7 +161,18 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
      */
     protected open fun onDestroy() {}
 
+    /**
+     * This converts an action to mutation flow.
+     *
+     * Within this function, you can do things that have side effects, such as calling the API.
+     * If the returned flow throws an exception, it will be automatically emitted to [error].
+     * If you want to handle your own exceptions, use try-catch to throw your own exceptions to error.
+     */
     protected abstract fun mutate(action: ActionT): Flow<MutationT>
+
+    /**
+     * Returns a new state based on the current [state] and [mutation].
+     */
     protected abstract fun reduce(state: StateT, mutation: MutationT): StateT
 
     final override fun send(action: ActionT) {
@@ -169,17 +181,47 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         }
     }
 
-    protected open fun Flow<ActionT>.transformAction(): Flow<ActionT> {
-        return this
-    }
+    /**
+     * Transforms the action flow.
+     *
+     * Subclasses can override this and transform the action flow.
+     *
+     * Note: The transformed flow should not throw an exception. Otherwise, the application will crash.
+     */
+    protected open fun Flow<ActionT>.transformAction(): Flow<ActionT> = this
 
-    protected open fun Flow<MutationT>.transformMutation(): Flow<MutationT> {
-        return this
-    }
+    /**
+     * Transforms the mutation flow.
+     *
+     * Subclasses can override this and transform the mutation flow.
+     * It is mainly used to convert the external flows into mutations.
+     *
+     * e.g.
+     * ```
+     * overridde fun Flow<Mutation>.transformMutation() = merge(
+     *     this,
+     *     externalFlow.map { Mutation.SetExternalData(it) }
+     * )
+     * ```
+     *
+     * Note: The transformed flow should not throw an exception. Otherwise, the application will crash.
+     */
+    protected open fun Flow<MutationT>.transformMutation(): Flow<MutationT> = this
 
-    protected open fun Flow<StateT>.transformState(): Flow<StateT> {
-        return this
-    }
+    /**
+     * Transforms the state flow.
+     *
+     * Subclasses can override this and transform the state flow.
+     * This is useful for logging state changes.
+     *
+     * e.g.
+     * ```
+     * override fun Flow<State>.transformState() = this.onEach { log("$it") }
+     * ```
+     *
+     * Note: The transformed flow should not throw an exception. Otherwise, the application will crash.
+     */
+    protected open fun Flow<StateT>.transformState(): Flow<StateT> = this
 
     /**
      * Emits an event to [event] flow.
