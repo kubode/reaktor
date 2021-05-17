@@ -20,11 +20,7 @@ kotlin {
                 implementation("app.cash.turbine:turbine:0.5.0")
             }
         }
-        val androidMain by getting {
-            dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.0-native-mt")
-            }
-        }
+        val androidMain by getting
         val androidTest by getting {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.0-native-mt")
