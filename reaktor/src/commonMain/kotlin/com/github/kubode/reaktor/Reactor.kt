@@ -3,6 +3,7 @@ package com.github.kubode.reaktor
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -110,6 +111,7 @@ abstract class NativeReactor<ActionT : Any, StateT : Any, EventT : Any> internal
  *
  * Inherit this class if you want to create your own Reactor.
  */
+@OptIn(FlowPreview::class)
 abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT : Any>(
     initialState: StateT,
     context: CoroutineContext = DEFAULT_CONTEXT,
@@ -140,7 +142,6 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
 
     init {
         reactorScope.launch {
-            @Suppress("EXPERIMENTAL_API_USAGE") // for flatMapMerge
             _actions
                 .transformAction()
                 .flatMapMerge { action -> mutate(action).catch { error(it) } }
