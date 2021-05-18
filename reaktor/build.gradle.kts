@@ -3,6 +3,13 @@ plugins {
     id("com.android.library")
 }
 
+repositories {
+    maven {
+        // kotest
+        url = uri("https://oss.sonatype.org/content/repositories/snapshots")
+    }
+}
+
 kotlin {
     android()
     ios()
@@ -16,7 +23,7 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("io.kotest:kotest-assertions-core:4.5.0")
+                implementation("io.kotest:kotest-assertions-core:4.6.0.235-SNAPSHOT")
                 implementation("app.cash.turbine:turbine:0.5.0")
             }
         }
