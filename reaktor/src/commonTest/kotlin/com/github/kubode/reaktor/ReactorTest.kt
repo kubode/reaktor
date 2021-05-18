@@ -221,7 +221,7 @@ class ReactorTest : BaseTest() {
         TestReactor(
             context = BaseReactor.DEFAULT_CONTEXT + handler,
             transformMutation = { flow { throw UnexpectedException() } },
-        )
+        ).state // initializes the flow of Reactor
 
         eventually { thrown.shouldBeInstanceOf<UnexpectedException>() }
     }

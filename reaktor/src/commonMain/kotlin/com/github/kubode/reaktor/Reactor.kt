@@ -129,18 +129,32 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
         MutableSharedFlow(replay = Int.MAX_VALUE, extraBufferCapacity = Int.MAX_VALUE)
 
     private val _state: MutableStateFlow<StateT> = MutableStateFlow(initialState)
-    final override val state: Flow<StateT> = _state
-    final override val currentState: StateT get() = _state.value
+    final override val state: Flow<StateT> by lazy {
+        initializeFlowCollectJob()
+        _state
+    }
+    final override val currentState: StateT
+        get() {
+            initializeFlowCollectJob()
+            return _state.value
+        }
 
     private val _event: Channel<EventT> = Channel(UNLIMITED)
-    final override val event: Flow<EventT> =
+    final override val event: Flow<EventT> by lazy {
+        initializeFlowCollectJob()
         _event.receiveAsFlow().shareIn(reactorScope, SharingStarted.WhileSubscribed())
+    }
 
     private val _error: Channel<Throwable> = Channel(UNLIMITED)
-    final override val error: Flow<Throwable> =
+    final override val error: Flow<Throwable> by lazy {
+        initializeFlowCollectJob()
         _error.receiveAsFlow().shareIn(reactorScope, SharingStarted.WhileSubscribed())
+    }
 
-    init {
+    // This is because if this is done before a subclass is initialized, an NPE will throw from a subclass.
+    // e.g. When a subclass accesses a constructor property from transformMutation().
+    // https://kotlinlang.org/docs/inheritance.html#derived-class-initialization-order
+    private val flowCollectJob: Job by lazy {
         reactorScope.launch {
             _actions
                 .transformAction()
@@ -150,6 +164,10 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
                 .transformState()
                 .collect { _state.value = it }
         }
+    }
+
+    private fun initializeFlowCollectJob() {
+        flowCollectJob
     }
 
     final override fun destroy() {
@@ -177,6 +195,7 @@ abstract class BaseReactor<ActionT : Any, MutationT : Any, StateT : Any, EventT 
     protected abstract fun reduce(state: StateT, mutation: MutationT): StateT
 
     final override fun send(action: ActionT) {
+        initializeFlowCollectJob()
         reactorScope.launch {
             _actions.emit(action)
         }
